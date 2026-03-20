@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "bustling-sunset-475009-d6",
+  "private_key_id": "f90a42451b605c8d9c7720a5d93f544d06ef98dd",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQDL0C+pf2X97ntz\npLOnA3j+IAUgw33X0AMxqsU/8/Qg6lfXitCzIx4roTpBxBSyf0tcYUd8nixMKCgG\nm6nLI1VWgTLMhyC6uls2hRea8pDBc7FrAr+sCzQbDpS1qqB3HzVdihBzAsSgHSFH\ny+KyVbWT8SBuiGQfQVo/c2X5cykzmlqsSmHgW+txj1KN94fi3EZVIfpwl1LRDWL8\nCZl6heybkzKraa8acc6eTYt8fVWLMqhErjZ7e3xe+dKD7vC8fxah3rcQ6TuQIBxM\n9OuOoGb9KEQ03xp7K0JVrnzsAWY/mtUdN0YJO7bQNuIaHyfCFVwllsQp4Klj4KfX\nhd1Iap2nAgMBAAECggEARBwdYWpGnjZtIPdAZia970aqEAnkaxODjbyA0F9pDPrj\nQg+MsOCie3gUrNenBwONHqEPr7B4IzckMRkiA9WZ9h+U506c/Gm8g5q0ib5X654L\nAzTW8tqHnicgQRl1KHnQbqLt3lFlfhBeB801w9zqojbpXKbNtrgzPZMF1/fJJAnu\nwCpbk84LAW0+zfEFHgQjR0H4roj5fieW2CpoNgcV4QSUkYNcKJzX34Uy0r+Kmwzh\nbwDupYAtnmr4fMf/qeokmnZeZnzeJFJK3vxUuvKEWmyyku9DqTSq2nwOIxFTGhGU\nO8Td+oB2GrM2xqc1TCgx0Ojj6OQnDGbTSPsW6C3CEQKBgQD6u3CH1Z3eEp8AS55p\n0TF5gSTLtvszFHjBabl7ZrKxLWdoGLKjaz4qD+vIVja6q1cbdOYuG6k2ED/gwxle\nLKGeHZ//oRbGjA1S22EcnKEtI4SzXZLrxh/N087uKWinVAPOFluSiHGompGfSmCj\nvQci6WSOt17NYfe1Xm0l5TKG2QKBgQDQGGS7N10VMmybfQRfLRYl6q+gf97SJM9k\nPg5T3W7TNdknuKuAM0Z6z4YNcfgiAO6D/OKDJm49NOAKL6PUrP8MDy4qpRjmLK/9\nUOeEMO1ujm55eqQcj3j64cJH/mRaltxB9V7Ou+spyyrESq1eWof84kDDfn/Zf+Il\n2Snsf8R4fwKBgQCijRKPfbYzWu8qSdwRzkW8+DTavW5t1z/SZLCTiCkhJMZ9fkWS\nHNzYeCnsX7hrnNmEO21fRx+UpUREezffDiBZWet41v7lCbc5mHCFFCaKFRTbFDdE\nE9Zaoo7taHsowBcXbPdBMKQ/IrZ2BspQXSRbReSjgc48aN8m/mjUwJrZQQKBgHrl\nvS/4TYgERLI7zkYriYYRKXIfssfnJ3irUajkANzKU5qq7NaE8d38C86K/aGPbU4U\nHu6X1sldHefGJPqoxOQpXvmekar2v2Vaz7B5ePAvPD2QWbXoYenBRQ1hx4Dc0e4+\nbKSpxQPk0jglZmhwDRojwV3zqqwYY8Y4kBL1jmIfAoGAHg+awdXuSzmEcq8aTw4U\nPQvHd78/e/TroygsHSPKYvHoADskE/jP5pL0zWG1XEk23eYDwg8TBivHxl28n/QQ\neuFBdBT/O88t2p1PwD4ZVAzUVq5KAagzIP9AWfVKRSQY3UKvJX2Gh/UN5vM7zarJ\n7o/MYYZUm6kIp2AnioEsip0=\n-----END PRIVATE KEY-----\n",
+  "client_email": "khemra-project@bustling-sunset-475009-d6.iam.gserviceaccount.com",
+  "client_id": "117175555994822836655",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/khemra-project%40bustling-sunset-475009-d6.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
