@@ -16,4 +16,5 @@ gspread==5.9.0
 matplotlib
 seaborn
 altair<5
-Pillow>=10.0.0  # This includes PIL which provides image handling
+Pillow>=10.0.0
+backports.imghdr
