@@ -1,29 +1,14 @@
-import nest_asyncio
-import asyncio
-from telethon import TelegramClient
-from telethon.tl.functions.messages import GetHistoryRequest
-import pandas as pd
-import re
-from datetime import datetime
 import streamlit as st
+import pandas as pd
 import plotly.express as px
-import pytz
-from rapidfuzz import fuzz, process
-import time
-import folium
-from streamlit_folium import st_folium
-from sklearn.cluster import DBSCAN
-import numpy as np
-import random
-
-# import sqlite3
-import sqlite3
-from folium.plugins import HeatMap
-import os
 from google.oauth2.service_account import Credentials
 import gspread
-from datetime import datetime, timedelta
-
+import base64
+import os
+import re
+from datetime import datetime
+import pytz
+import random
 
 # from oauth2client.service_account import ServiceAccountCredentials
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
