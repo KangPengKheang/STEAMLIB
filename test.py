@@ -1,5 +1,3 @@
-!pip install backports.imghdr
-
 import nest_asyncio
 import asyncio
 from telethon import TelegramClient
@@ -66,7 +64,7 @@ st.markdown(
     }
     .metric-card {
         background: linear-gradient(135deg, #f0f8ff 0%, #e0f0e0 100%);
-        padding: 20px;
+        paddingpx;
         border-radius: 12px;
         text-align: center;
         margin: 10px;
@@ -114,75 +112,7 @@ st.markdown(
 )
 
 
-import base64
-import os
-def get_base64_encoded_image(image_path):
-    """Get base64 encoded string of an image"""
-    with open(image_path, "rb") as img_file:
-        return base64.b64encode(img_file.read()).decode("utf-8")
-
-
-# Create three columns for the header
-header_col1, header_col2, header_col3 = st.columns([1, 3, 1])
-
-with header_col1:
-    try:
-        # logo_path = "Logo-CMCB-15.png"
-        logo_path = os.path.join(BASE_DIR, "Logo-CMCB_FA-15.png")
-        if os.path.exists(logo_path):
-            logo_base64 = get_base64_encoded_image(logo_path)
-            st.markdown(
-                f"""
-                <div style="background: white; padding: 10px; border-radius: 12px; 
-                            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); 
-                            display: flex; align-items: center; justify-content: center;">
-                    <img src="data:image/png;base64,{logo_base64}" 
-                         width="100" style="border-radius: 8px;">
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                """
-            <div style="background: #f0f0f0; padding: 20px; border-radius: 12px; 
-                        text-align: center; color: #666;">
-                <p style="margin: 0;">🏦<br>Logo</p>
-            </div>
-            """,
-                unsafe_allow_html=True,
-            )
-    except Exception as e:
-        st.markdown(
-            """
-        <div style="background: #f0f0f0; padding: 20px; border-radius: 12px; 
-                    text-align: center; color: #666;">
-            <p style="margin: 0;">🏦<br>Logo</p>
-        </div>
-        """,
-            unsafe_allow_html=True,
-        )
-
-with header_col2:
-    st.markdown(
-        """
-        <div style="text-align: center; padding: 15px;">
-            <h1 style="color: #004A08; margin: 0; font-size: 2.2rem; font-weight: 700;">
-                Planning, Execution and Customer Data Management
-            </h1>
-            <p style="color: #2E8B57; margin: 5px 0 0 0; font-size: 1.1rem; font-weight: 500;">
-                Performance & Execution Management System
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-with header_col3:
-    st.markdown("")
-
 # === Extract info from text ===
-
 
 
 @st.cache_resource
@@ -699,7 +629,7 @@ def main():
                 
                 # Prepare data for visualization
                 if not bank_branch_pivot.empty:
-                    # Create a stacked bar chart using Plotly
+                    # Import plotly inside the function to avoid startup issues
                     import plotly.express as px
                     
                     fig_banks = px.bar(
