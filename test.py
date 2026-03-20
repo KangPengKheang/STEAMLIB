@@ -49,7 +49,7 @@ st.markdown(
     }
     .metric-card {
         background: linear-gradient(135deg, #f0f8ff 0%, #e0f0e0 100%);
-        paddingpx;
+        padding: 20px;
         border-radius: 12px;
         text-align: center;
         margin: 10px;
@@ -94,18 +94,12 @@ st.markdown(
 </style>
 """,
     unsafe_allow_html=True,
-)
-
-
-# === Extract info from text ===
-
-
-@st.cache_resource
+_resource
 def connect_to_google_sheets():
     try:
         scope = [
-            "https://www.googleapis.com/auth/spreadsheets  ",
-            "https://www.googleapis.com/auth/drive.file  ",
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive.file",
         ]
 
         # Check if secrets exist first
@@ -127,9 +121,7 @@ def connect_to_google_sheets():
         credentials = Credentials.from_service_account_info(
             creds_dict,
             scopes=scope,
-        )
-
-        gc = gspread.authorize(credentials)
+        gspread.authorize(credentials)
         try:
             # List available spreadsheets to test connection
             # Note: This might not work depending on permissions
@@ -189,7 +181,7 @@ def load_sheet_data(_gc, sheet_id, worksheet_name):
                 return pd.DataFrame()
 
             df = pd.DataFrame(data)
-            # st.success(f"✅ Successfully loaded {len(df)} records from {worksheet_name}")
+            # st.success(f"✅ Successfully loaded records from {worksheet_name}")
             return df
 
         except Exception as e:
@@ -200,7 +192,6 @@ def load_sheet_data(_gc, sheet_id, worksheet_name):
         st.error(f"❌ Unexpected error loading from Google Sheets: {str(e)}")
         return pd.DataFrame()
 
-import re
 @st.cache_data
 def get_telegram_data():
     gc = connect_to_google_sheets()
@@ -233,6 +224,53 @@ def prepare_sales_df(raw_df):
         df["Message_Date"] = pd.to_datetime(df["Message_Date"], errors="coerce")
 
     return df
+
+def format_amount(value):
+    if pd.isna(value) or str(value).strip() == "":
+        return ""
+    val_str = str(value).strip()
+    # Keep "K" values as is (10K, 20k, etc.)
+    if val_str.lower().endswith("k"):
+        return val_str
+    # Try convert to float
+    try:
+        num = float(val_str.replace("$", "").replace(",", ""))
+        return f"${num:,.2f}"
+    except:
+        return ""
+
+def format_interest(value):
+    """Enhanced Interest Rate formatter with detailed error handling"""
+    if pd.isna(value) or str(value).strip() in ["", "nan", "None", "null"]:
+        return ""
+    val_str = str(value).strip()
+    # print(f"🔍 Formatting interest: '{value}' → '{val_str}'")  # Debug line
+    # Remove percentage symbol for processing
+    clean_val = val_str.replace("%", "").strip()
+
+    # Try multiple conversion strategies
+    conversion_attempts = [
+        # Strategy 1: Direct conversion
+        lambda x: float(x),
+        # Strategy 2: Remove commas and spaces
+        lambda x: float(x.replace(",", "").replace(" ", "")),
+        # Strategy 3: Extract first number found
+        lambda x: (
+            float(re.search(r"[-+]?\d*\.?\d+", x).group())
+            if re.search(r"[-+]?\d*\.?\d+", x)
+            else None
+        ),
+    ]
+
+    for i, convert_func in enumerate(conversion_attempts):
+        try:
+            num = convert_func(clean_val)
+            if num is not None:
+                formatted = f"{num:.1f}%"
+                # print(f"✅ Success with strategy {i+1}: '{val_str}' → {formatted}")
+                return formatted
+        except (ValueError, AttributeError) as e:
+            continue
 
 # === Streamlit App ===
 def main():
@@ -285,53 +323,6 @@ def main():
                 col for col in required_columns if col in telegram_df.columns
             ]
             display_df = telegram_df[available_columns].copy()
-
-            def format_amount(value):
-                if pd.isna(value) or str(value).strip() == "":
-                    return ""
-                val_str = str(value).strip()
-                # Keep "K" values as is (10K, 20k, etc.)
-                if val_str.lower().endswith("k"):
-                    return val_str
-                # Try convert to float
-                try:
-                    num = float(val_str.replace("$", "").replace(",", ""))
-                    return f"${num:,.2f}"
-                except:
-                    return ""
-
-            def format_interest(value):
-                """Enhanced Interest Rate formatter with detailed error handling"""
-                if pd.isna(value) or str(value).strip() in ["", "nan", "None", "null"]:
-                    return ""
-                val_str = str(value).strip()
-                # print(f"🔍 Formatting interest: '{value}' → '{val_str}'")  # Debug line
-                # Remove percentage symbol for processing
-                clean_val = val_str.replace("%", "").strip()
-
-                # Try multiple conversion strategies
-                conversion_attempts = [
-                    # Strategy 1: Direct conversion
-                    lambda x: float(x),
-                    # Strategy 2: Remove commas and spaces
-                    lambda x: float(x.replace(",", "").replace(" ", "")),
-                    # Strategy 3: Extract first number found
-                    lambda x: (
-                        float(re.search(r"[-+]?\d*\.?\d+", x).group())
-                        if re.search(r"[-+]?\d*\.?\d+", x)
-                        else None
-                    ),
-                ]
-
-                for i, convert_func in enumerate(conversion_attempts):
-                    try:
-                        num = convert_func(clean_val)
-                        if num is not None:
-                            formatted = f"{num:.1f}%"
-                            # print(f"✅ Success with strategy {i+1}: '{val_str}' → {formatted}")
-                            return formatted
-                    except (ValueError, AttributeError) as e:
-                        continue
 
             # Clean and format the data for presentation
             def format_sales_data(df):
@@ -575,8 +566,7 @@ def main():
                 ]
             # Quick Stats for Sales Team
             total_customers = len(filtered_df)
-            high_potential = (
-                len(filtered_df[filtered_df["Potential_Level"].str.strip().str.upper() == "H"])
+            high_potential =_df[filtered_df["Potential_Level"].str.strip().str.upper() == "H"])
                 if "Potential_Level" in display_df.columns
                 else 0
             )
@@ -614,9 +604,6 @@ def main():
                 
                 # Prepare data for visualization
                 if not bank_branch_pivot.empty:
-                    # Import plotly inside the function to avoid startup issues
-                    import plotly.express as px
-                    
                     fig_banks = px.bar(
                         bank_branch_pivot.reset_index(),
                         x='Source_Channel',
