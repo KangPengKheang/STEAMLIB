@@ -8,6 +8,7 @@ import pytz
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+import nest_asyncio
 
 # === Page Config ===
 st.set_page_config(
