@@ -1,3 +1,5 @@
+!pip install backports.imghdr
+
 import nest_asyncio
 import asyncio
 from telethon import TelegramClient
