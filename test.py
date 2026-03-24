@@ -8,6 +8,7 @@ import pytz
 import plotly.graph_objects as go
 from datetime import datetime
 import os
+import nest_asyncio
 
 st.set_page_config(
     page_title="Sales Performance Dashboard",
