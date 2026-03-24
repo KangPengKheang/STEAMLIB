@@ -38,78 +38,62 @@ api_id = 20056320
 api_hash = "4b1394e0f07625a3c25ea32fa3030218"
 session_name = "customer_session_2"
 
-# === Custom CSS ===
+# ══════════════════════════════════════════════════════════════════════════════
+# GLOBAL CSS
+# ══════════════════════════════════════════════════════════════════════════════
 st.markdown(
-    """
+    f"""
 <style>
-    .main-header {
-        background: linear-gradient(135deg, #2E8B57 0%, #3CB371 100%);
-        padding: 25px;
-        border-radius: 15px;
-        color: white;
-        text-align: center;
-        margin-bottom: 25px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    }
-    .function-card {
-        background: white;
-        padding: 25px;
-        border-radius: 15px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        margin-bottom: 25px;
-        border-left: 5px solid #2E8B57;
-    }
-    .metric-card {
-        background: linear-gradient(135deg, #f0f8ff 0%, #e0f0e0 100%);
-        padding: 20px;
-        border-radius: 12px;
-        text-align: center;
-        margin: 10px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-    .stButton>button {
-        background: linear-gradient(135deg, #2E8B57 0%, #3CB371 100%);
-        color: white;
-        border: none;
-        padding: 12px 24px;
-        border-radius: 8px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    }
-    .highlight {
-        background-color: #fff3cd;
-        padding: 15px;
-        border-radius: 8px;
-        border-left: 4px solid #ffc107;
-        margin: 10px 0;
-    }
-    .tab-content {
-        padding: 20px;
-        background: white;
-        border-radius: 0 0 15px 15px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-    }
-    .header-style {
-        background: linear-gradient(90deg, #2E8B57 0%, #3CB371 100%);
-        padding: 15px;
-        border-radius: 10px;
-        color: white;
-        text-align: center;
-        margin: 15px 0;
-        font-size: 1.3em;
-        font-weight: bold;
-    }
+[data-testid="stAppViewContainer"] {{ background: #F4F7F5; }}
+[data-testid="stSidebar"] {{ background: #fff; border-right: 1px solid #E0EAE4; }}
+ 
+.banner {{
+    background: linear-gradient(135deg, {G_DARK} 0%, {G_LIGHT} 100%);
+    padding: 28px 36px; border-radius: 16px; color: #fff; margin-bottom: 28px;
+}}
+.banner h1 {{ margin: 0 0 4px 0; font-size: 1.85rem; font-weight: 700; }}
+.banner p  {{ margin: 0; opacity: .85; font-size: 0.92rem; }}
+ 
+.card {{
+    background: #fff; border-radius: 14px; padding: 20px 26px;
+    margin-bottom: 18px; border-left: 5px solid {G_MID};
+    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}}
+.card h3 {{ margin: 0; color: {G_DARK}; font-size: 1.05rem; font-weight: 700; }}
+ 
+.kpi-row {{ display:flex; gap:14px; flex-wrap:wrap; margin-bottom:22px; }}
+.kpi {{
+    flex:1; min-width:120px; background:#fff; border-radius:12px;
+    padding:16px 18px; text-align:center;
+    box-shadow: 0 2px 6px rgba(0,0,0,.07);
+    border-top: 4px solid {G_MID};
+}}
+.kpi .val {{ font-size:1.9rem; font-weight:700; color:{G_DARK}; line-height:1.1; }}
+.kpi .lbl {{ font-size:0.74rem; color:#6B8C7A; margin-top:4px; text-transform:uppercase; letter-spacing:.05em; }}
+.kpi.red   {{ border-top-color:#E53935; }}
+.kpi.amber {{ border-top-color:#F59E0B; }}
+.kpi.blue  {{ border-top-color:#2563EB; }}
+ 
+.chart-label {{
+    font-size:0.78rem; font-weight:700; color:{G_DARK};
+    text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px;
+}}
+ 
+.stButton>button {{
+    background: linear-gradient(135deg, {G_DARK} 0%, {G_LIGHT} 100%);
+    color:#fff; border:none; border-radius:8px; font-weight:600;
+    padding:10px 20px; transition:opacity .2s;
+}}
+.stButton>button:hover {{ opacity:.86; }}
 </style>
 """,
     unsafe_allow_html=True,
 )
  
  
-# === Google Sheets Connection ===
+# ══════════════════════════════════════════════════════════════════════════════
+# GOOGLE SHEETS HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
 @st.cache_resource
 def connect_to_google_sheets():
     try:
@@ -117,75 +101,35 @@ def connect_to_google_sheets():
             "https://www.googleapis.com/auth/spreadsheets",
             "https://www.googleapis.com/auth/drive.file",
         ]
- 
         if "service_account" not in st.secrets:
-            st.error("❌ Google Sheets credentials not found in secrets")
-            st.info("Please add your service account credentials to Streamlit secrets")
+            st.error("❌ Google Sheets credentials not found in secrets.")
             return None
- 
         creds_dict = dict(st.secrets["service_account"])
- 
-        required_fields = ["type", "project_id", "private_key", "client_email"]
-        for field in required_fields:
+        for field in ["type", "project_id", "private_key", "client_email"]:
             if field not in creds_dict:
-                st.error(f"❌ Missing required field in secrets: {field}")
+                st.error(f"❌ Missing field in secrets: {field}")
                 return None
- 
-        credentials = Credentials.from_service_account_info(
-            creds_dict,
-            scopes=scope,
-        )
-        gc = gspread.authorize(credentials)
-        return gc
- 
+        credentials = Credentials.from_service_account_info(creds_dict, scopes=scope)
+        return gspread.authorize(credentials)
     except Exception as e:
-        st.error(f"❌ Failed to connect to Google Sheets: {str(e)}")
-        st.info(
-            "💡 Make sure your Google Sheet is shared with: "
-            + st.secrets["service_account"].get("client_email", "N/A")
-        )
+        st.error(f"❌ Connection failed: {e}")
         return None
  
  
 def load_sheet_data(_gc, sheet_id, worksheet_name):
     try:
-        if _gc is None:
-            st.error("❌ Google Sheets client is not initialized")
-            return pd.DataFrame()
-        if not sheet_id:
-            st.error("❌ Sheet ID is required")
-            return pd.DataFrame()
-        if not worksheet_name:
-            st.error("❌ Worksheet name is required")
-            return pd.DataFrame()
- 
-        try:
-            spreadsheet = _gc.open_by_key(sheet_id)
-        except gspread.SpreadsheetNotFound:
-            st.error(f"❌ Spreadsheet not found with ID: {sheet_id}")
-            return pd.DataFrame()
-        except Exception as e:
-            st.error(f"❌ Failed to open spreadsheet: {str(e)}")
-            return pd.DataFrame()
- 
-        try:
-            sheet = spreadsheet.worksheet(worksheet_name)
-        except gspread.exceptions.WorksheetNotFound:
-            st.error(f"❌ Worksheet '{worksheet_name}' not found in the spreadsheet")
-            return pd.DataFrame()
- 
-        try:
-            data = sheet.get_all_records()
-            if not data:
-                st.info(f"📭 No data found in worksheet '{worksheet_name}'")
-                return pd.DataFrame()
-            return pd.DataFrame(data)
-        except Exception as e:
-            st.error(f"❌ Failed to read data from worksheet: {str(e)}")
-            return pd.DataFrame()
- 
+        spreadsheet = _gc.open_by_key(sheet_id)
+        sheet       = spreadsheet.worksheet(worksheet_name)
+        data        = sheet.get_all_records()
+        return pd.DataFrame(data) if data else pd.DataFrame()
+    except gspread.SpreadsheetNotFound:
+        st.error(f"❌ Spreadsheet not found: {sheet_id}")
+        return pd.DataFrame()
+    except gspread.exceptions.WorksheetNotFound:
+        st.error(f"❌ Worksheet not found: {worksheet_name}")
+        return pd.DataFrame()
     except Exception as e:
-        st.error(f"❌ Unexpected error loading from Google Sheets: {str(e)}")
+        st.error(f"❌ Load error: {e}")
         return pd.DataFrame()
  
  
@@ -193,21 +137,21 @@ def load_sheet_data(_gc, sheet_id, worksheet_name):
 def get_telegram_data():
     gc = connect_to_google_sheets()
     if gc:
-        df = load_sheet_data(gc, SHEET_ID, WORKSHEET_NAME)
-        return df
+        return load_sheet_data(gc, SHEET_ID, WORKSHEET_NAME)
     return pd.DataFrame()
  
  
-# === Formatters ===
+# ══════════════════════════════════════════════════════════════════════════════
+# FORMATTERS
+# ══════════════════════════════════════════════════════════════════════════════
 def format_amount(value):
     if pd.isna(value) or str(value).strip() == "":
         return ""
-    val_str = str(value).strip()
-    if val_str.lower().endswith("k"):
-        return val_str
+    v = str(value).strip()
+    if v.lower().endswith("k"):
+        return v
     try:
-        num = float(val_str.replace("$", "").replace(",", ""))
-        return f"${num:,.2f}"
+        return f"${float(v.replace('$','').replace(',','')):,.2f}"
     except:
         return ""
  
@@ -215,727 +159,472 @@ def format_amount(value):
 def format_interest(value):
     if pd.isna(value) or str(value).strip() in ["", "nan", "None", "null"]:
         return ""
-    val_str = str(value).strip()
-    clean_val = val_str.replace("%", "").strip()
-    conversion_attempts = [
+    clean = str(value).strip().replace("%", "").strip()
+    for fn in [
         lambda x: float(x),
         lambda x: float(x.replace(",", "").replace(" ", "")),
         lambda x: (
             float(re.search(r"[-+]?\d*\.?\d+", x).group())
-            if re.search(r"[-+]?\d*\.?\d+", x)
-            else None
+            if re.search(r"[-+]?\d*\.?\d+", x) else None
         ),
-    ]
-    for convert_func in conversion_attempts:
+    ]:
         try:
-            num = convert_func(clean_val)
-            if num is not None:
-                return f"{num:.1f}%"
-        except (ValueError, AttributeError):
+            n = fn(clean)
+            if n is not None:
+                return f"{n:.1f}%"
+        except:
             continue
     return ""
  
  
-# === Data Preparation ===
-@st.cache_data
-def prepare_sales_df(raw_df):
-    raw_df = raw_df[
-        raw_df["Name"].notna()
-        & (raw_df["Name"].str.strip() != "")
-        & (raw_df["Sender_Name"].str.strip() != "Zana MAM")
-        & (raw_df["Sender_Name"].str.strip() != "Khemra BUTH")
-    ]
+# ══════════════════════════════════════════════════════════════════════════════
+# DATA PREP
+# ══════════════════════════════════════════════════════════════════════════════
+def prepare_display_df(raw_df):
     df = raw_df.copy()
+    if "Name" in df.columns:
+        df = df[df["Name"].notna() & (df["Name"].str.strip() != "")]
+    if "Sender_Name" in df.columns:
+        df = df[~df["Sender_Name"].str.strip().isin(["Zana MAM", "Khemra BUTH"])]
     if "Tel" in df.columns:
         df["Tel"] = df["Tel"].astype(str).apply(
             lambda x: f"0{x}" if x and not x.startswith("0") else x
         )
-    if "Amount" in df.columns:
-        df["Amount"] = df["Amount"].apply(format_amount)
-    if "Interest" in df.columns:
-        df["Interest"] = df["Interest"].apply(format_interest)
+    if "Amount"   in df.columns: df["Amount"]   = df["Amount"].apply(format_amount)
+    if "Interest" in df.columns: df["Interest"] = df["Interest"].apply(format_interest)
     if "Message_Date" in df.columns:
-        df["Message_Date"] = pd.to_datetime(df["Message_Date"], errors="coerce")
+        df["Message_Date"] = pd.to_datetime(df["Message_Date"], errors="coerce").dt.normalize()
+    for col in ["Name","Business","Bank","Loan_Type","Maturity","Tenure","Source_Channel","Potential_Level"]:
+        if col in df.columns:
+            df[col] = df[col].astype(str).replace({"nan":"","None":"","N/A":""}).str.strip()
     return df
  
  
-# === Styling ===
-def style_sales_dataframe(df):
+# ══════════════════════════════════════════════════════════════════════════════
+# TABLE STYLER
+# ══════════════════════════════════════════════════════════════════════════════
+def style_table(df):
+    def row_bg(row):
+        lvl   = str(row.get("Potential","")).strip().upper()
+        color = {"H":"#FFF3CD","M":"#E8F5E8","L":"#F8F9FA"}.get(lvl,"#FFFFFF")
+        return [f"background-color:{color}"] * len(row)
+ 
+    def pot_color(val):
+        return {
+            "H":"color:#C62828;font-weight:700;font-size:14px;",
+            "M":"color:#E65100;font-weight:700;font-size:14px;",
+            "L":"color:#2E7D32;font-weight:700;font-size:14px;",
+        }.get(str(val).strip().upper(), "color:#6c757d;font-size:14px;")
+ 
     styler = df.style.hide(axis="index")
- 
+    styler = styler.apply(row_bg, axis=1)
     if "Potential" in df.columns:
-        styler = styler.apply(
-            lambda row: [
-                (
-                    "background-color: #fff3cd"
-                    if str(row.get("Potential", "")).strip().upper() == "H"
-                    else (
-                        "background-color: #e8f5e8"
-                        if str(row.get("Potential", "")).strip().upper() == "M"
-                        else "background-color: #f8f9fa"
-                    )
-                )
-                for _ in row
-            ],
-            axis=1,
-        )
- 
-    def color_potential(val):
-        if str(val).strip().upper() == "H":
-            return "color: #d32f2f; font-weight: bold; font-size: 14px;"
-        elif str(val).strip().upper() == "M":
-            return "color: #f57c00; font-weight: bold; font-size: 14px;"
-        elif str(val).strip().upper() == "L":
-            return "color: #388e3c; font-weight: bold; font-size: 14px;"
-        return "color: #6c757d; font-size: 14px;"
- 
-    if "Potential" in df.columns:
-        styler = styler.map(color_potential, subset=["Potential"])
- 
+        styler = styler.map(pot_color, subset=["Potential"])
     if "Amount" in df.columns:
         styler = styler.map(
-            lambda val: "color: #1e88e5; font-weight: bold; font-size: 14px;",
+            lambda _: "color:#1565C0;font-weight:700;font-size:14px;",
             subset=["Amount"],
         )
- 
-    styler = styler.set_properties(
-        **{
-            "text-align": "left",
-            "white-space": "pre-wrap",
-            "font-size": "18px",
-            "border": "1px solid #dee2e6",
-            "padding": "10px 14px",
-        }
-    )
- 
-    styler = styler.set_table_styles(
-        [
-            {
-                "selector": "table",
-                "props": [
-                    ("table-layout", "fixed"),
-                    ("width", "100%"),
-                    ("border-collapse", "collapse"),
-                ],
-            },
-            {
-                "selector": "th",
-                "props": [
-                    ("background-color", "#2E8B57"),
-                    ("color", "white"),
-                    ("font-weight", "bold"),
-                    ("text-align", "center"),
-                    ("font-size", "15px"),
-                    ("border", "1px solid #1e6b4e"),
-                    ("padding", "10px 14px"),
-                ],
-            },
-            {
-                "selector": "td",
-                "props": [
-                    ("border", "1px solid #dee2e6"),
-                    ("padding", "10px 14px"),
-                    ("vertical-align", "top"),
-                ],
-            },
-            {"selector": "th:nth-child(1), td:nth-child(1)", "props": [("width", "10%")]},
-            {"selector": "th:nth-child(2), td:nth-child(2)", "props": [("width", "10%")]},
-            {"selector": "th:nth-child(3), td:nth-child(3)", "props": [("width", "5%")]},
-            {"selector": "th:nth-child(4), td:nth-child(4)", "props": [("width", "10%")]},
-            {"selector": "th:nth-child(5), td:nth-child(5)", "props": [("width", "5%")]},
-            {"selector": "th:nth-child(6), td:nth-child(6)", "props": [("width", "5%")]},
-            {"selector": "th:nth-child(7), td:nth-child(7)", "props": [("width", "5%")]},
-            {"selector": "th:nth-child(8), td:nth-child(8)", "props": [("width", "5%")]},
-            {"selector": "th:nth-child(9), td:nth-child(9)", "props": [("width", "5%")]},
-            {"selector": "th:nth-child(10), td:nth-child(10)", "props": [("width", "5%")]},
-            {"selector": "th:nth-child(11), td:nth-child(11)", "props": [("width", "10%")]},
-            {"selector": "th:nth-child(12), td:nth-child(12)", "props": [("width", "15%")]},
-        ]
-    )
+    styler = styler.set_properties(**{
+        "text-align":"left","white-space":"pre-wrap",
+        "font-size":"14px","border":"1px solid #DEE2E6","padding":"9px 13px",
+    })
+    styler = styler.set_table_styles([
+        {"selector":"table","props":[("table-layout","fixed"),("width","100%"),("border-collapse","collapse")]},
+        {"selector":"th","props":[("background-color",G_MID),("color","white"),("font-weight","bold"),
+                                  ("font-size","13px"),("border","1px solid #1e6b4e"),
+                                  ("padding","10px 13px"),("text-align","center")]},
+        {"selector":"td","props":[("border","1px solid #DEE2E6"),("padding","9px 13px"),("vertical-align","top")]},
+        {"selector":"th:nth-child(1),td:nth-child(1)","props":[("width","11%")]},
+        {"selector":"th:nth-child(2),td:nth-child(2)","props":[("width","10%")]},
+        {"selector":"th:nth-child(3),td:nth-child(3)","props":[("width","7%")]},
+        {"selector":"th:nth-child(4),td:nth-child(4)","props":[("width","10%")]},
+        {"selector":"th:nth-child(5),td:nth-child(5)","props":[("width","8%")]},
+        {"selector":"th:nth-child(6),td:nth-child(6)","props":[("width","7%")]},
+        {"selector":"th:nth-child(7),td:nth-child(7)","props":[("width","7%")]},
+        {"selector":"th:nth-child(8),td:nth-child(8)","props":[("width","6%")]},
+        {"selector":"th:nth-child(9),td:nth-child(9)","props":[("width","8%")]},
+        {"selector":"th:nth-child(10),td:nth-child(10)","props":[("width","6%")]},
+        {"selector":"th:nth-child(11),td:nth-child(11)","props":[("width","8%")]},
+        {"selector":"th:nth-child(12),td:nth-child(12)","props":[("width","12%")]},
+    ])
     return styler
  
  
-# === Bank Distribution Charts ===
-def render_bank_branch_charts(filtered_df):
-    st.markdown("### 🏦 Bank Information Gathered from Each Branch / Market")
- 
+# ══════════════════════════════════════════════════════════════════════════════
+# BANK × BRANCH CHARTS
+# ══════════════════════════════════════════════════════════════════════════════
+def render_bank_charts(filtered_df):
+    """
+    Left  — Horizontal bar: overall customer count per Bank
+    Right — Stacked bar: each Branch broken down by Bank
+    Below — Expandable pivot table
+    """
     if "Bank" not in filtered_df.columns or "Source_Channel" not in filtered_df.columns:
-        st.warning("⚠️ Columns 'Bank' or 'Source_Channel' not found in the dataset.")
+        st.warning("⚠️ 'Bank' or 'Source_Channel' column missing.")
         return
  
-    chart_df = filtered_df[["Source_Channel", "Bank"]].copy()
-    chart_df = chart_df[
-        chart_df["Source_Channel"].notna()
-        & (chart_df["Source_Channel"].str.strip() != "")
-        & chart_df["Bank"].notna()
-        & (chart_df["Bank"].str.strip() != "")
+    df = filtered_df[["Source_Channel", "Bank"]].copy()
+    df = df[df["Source_Channel"].str.strip().ne("") & df["Bank"].str.strip().ne("")]
+ 
+    if df.empty:
+        st.info("No bank / branch data for the selected filters.")
+        return
+ 
+    # ── KPI tiles ─────────────────────────────────────────────────────────────
+    n_branches = df["Source_Channel"].nunique()
+    n_banks    = df["Bank"].nunique()
+    top_bank   = df["Bank"].value_counts().idxmax()
+    top_branch = df["Source_Channel"].value_counts().idxmax()
+ 
+    st.markdown(
+        f"""
+        <div class="kpi-row">
+            <div class="kpi">
+                <div class="val">{n_branches}</div>
+                <div class="lbl">Branches</div>
+            </div>
+            <div class="kpi blue">
+                <div class="val">{n_banks}</div>
+                <div class="lbl">Banks Found</div>
+            </div>
+            <div class="kpi amber">
+                <div class="val" style="font-size:1.25rem">{top_bank}</div>
+                <div class="lbl">Top Bank</div>
+            </div>
+            <div class="kpi red">
+                <div class="val" style="font-size:1.05rem">{top_branch}</div>
+                <div class="lbl">Busiest Branch</div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+ 
+    # ── Consistent colour per bank ────────────────────────────────────────────
+    banks_by_freq = df["Bank"].value_counts().index.tolist()
+    PALETTE = [
+        "#2E8B57","#2563EB","#F59E0B","#E53935","#7C3AED",
+        "#0891B2","#EA580C","#16A34A","#DB2777","#64748B",
     ]
+    color_map = {b: PALETTE[i % len(PALETTE)] for i, b in enumerate(banks_by_freq)}
  
-    if chart_df.empty:
-        st.info("No bank / branch data available for the current filters.")
-        return
+    col_l, col_r = st.columns([1, 2], gap="large")
  
-    # ── Grouped count ──────────────────────────────────────────────────────────
-    bank_branch_count = (
-        chart_df.groupby(["Source_Channel", "Bank"])
-        .size()
-        .reset_index(name="Customers")
-    )
+    # ── LEFT: Overall bank totals ─────────────────────────────────────────────
+    with col_l:
+        st.markdown('<p class="chart-label">Overall Bank Share</p>', unsafe_allow_html=True)
  
-    # ── Summary metrics row ────────────────────────────────────────────────────
-    total_branches = chart_df["Source_Channel"].nunique()
-    total_banks = chart_df["Bank"].nunique()
-    top_bank = chart_df["Bank"].value_counts().idxmax()
-    top_branch = chart_df["Source_Channel"].value_counts().idxmax()
+        vc = df["Bank"].value_counts().reset_index()
+        vc.columns = ["Bank", "Customers"]
+        vc = vc.sort_values("Customers", ascending=True)
  
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric("Branches Reporting", total_branches)
-    m2.metric("Unique Banks Found", total_banks)
-    m3.metric("Most Common Bank", top_bank)
-    m4.metric("Busiest Branch", top_branch)
- 
-    st.markdown("---")
- 
-    # ── Tab layout for charts ──────────────────────────────────────────────────
-    chart_tab1, chart_tab2, chart_tab3 = st.tabs(
-        ["📊 Stacked Bar", "🌡️ Heat Map", "🥧 Bank Share"]
-    )
- 
-    # ── TAB 1: Stacked bar ─────────────────────────────────────────────────────
-    with chart_tab1:
-        st.markdown(
-            "Each bar represents one **Branch/Market**. "
-            "Segments show how many customers hold a loan with each bank."
+        fig_h = go.Figure(go.Bar(
+            x=vc["Customers"],
+            y=vc["Bank"],
+            orientation="h",
+            marker_color=[color_map.get(b, G_MID) for b in vc["Bank"]],
+            text=vc["Customers"],
+            textposition="outside",
+            textfont=dict(size=13, color="#1B3A2D"),
+            hovertemplate="<b>%{y}</b>: %{x} customers<extra></extra>",
+        ))
+        fig_h.update_layout(
+            height=max(260, len(vc) * 46 + 60),
+            margin=dict(t=8, b=8, l=8, r=52),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(showgrid=True, gridcolor="#E6EEE9", zeroline=False, showticklabels=False),
+            yaxis=dict(showgrid=False, tickfont=dict(size=13)),
+            showlegend=False,
+            bargap=0.28,
         )
+        st.plotly_chart(fig_h, use_container_width=True, config={"displayModeBar": False})
  
+    # ── RIGHT: Branch × Bank stacked bar ─────────────────────────────────────
+    with col_r:
+        st.markdown('<p class="chart-label">Bank Distribution by Branch</p>', unsafe_allow_html=True)
+ 
+        bb = (
+            df.groupby(["Source_Channel", "Bank"])
+            .size()
+            .reset_index(name="n")
+        )
         branch_order = (
-            bank_branch_count.groupby("Source_Channel")["Customers"]
+            bb.groupby("Source_Channel")["n"]
             .sum()
             .sort_values(ascending=False)
             .index.tolist()
         )
  
-        fig_stacked = px.bar(
-            bank_branch_count,
-            x="Source_Channel",
-            y="Customers",
-            color="Bank",
-            barmode="stack",
-            category_orders={"Source_Channel": branch_order},
-            text_auto=True,
-            height=500,
-            color_discrete_sequence=px.colors.qualitative.Set2,
-            labels={"Source_Channel": "Branch / Market", "Customers": "No. of Customers"},
-        )
-        fig_stacked.update_layout(
-            xaxis_title="Branch / Market",
-            yaxis_title="Number of Customers",
-            legend_title="Bank",
-            hovermode="x unified",
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
-            xaxis=dict(tickangle=-35, automargin=True),
-            margin=dict(t=30, b=100, l=60, r=20),
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        )
-        fig_stacked.update_traces(
-            textfont_size=11, textposition="inside", cliponaxis=False
-        )
-        st.plotly_chart(fig_stacked, use_container_width=True)
- 
-        # Grouped (side-by-side) view toggle
-        with st.expander("📊 View as Grouped Bars"):
-            fig_grouped = px.bar(
-                bank_branch_count,
-                x="Source_Channel",
-                y="Customers",
-                color="Bank",
-                barmode="group",
-                category_orders={"Source_Channel": branch_order},
-                height=450,
-                color_discrete_sequence=px.colors.qualitative.Set2,
-                labels={"Source_Channel": "Branch / Market", "Customers": "No. of Customers"},
-            )
-            fig_grouped.update_layout(
-                xaxis_title="Branch / Market",
-                yaxis_title="Number of Customers",
-                legend_title="Bank",
-                hovermode="x unified",
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-                xaxis=dict(tickangle=-35, automargin=True),
-                margin=dict(t=30, b=100, l=60, r=20),
-            )
-            st.plotly_chart(fig_grouped, use_container_width=True)
- 
-    # ── TAB 2: Heat map ────────────────────────────────────────────────────────
-    with chart_tab2:
-        st.markdown(
-            "Rows = **Branches**, Columns = **Banks**. "
-            "Darker green = more customers from that bank at that branch."
-        )
- 
-        pivot = bank_branch_count.pivot_table(
-            index="Source_Channel",
-            columns="Bank",
-            values="Customers",
-            fill_value=0,
-        )
-        pivot = pivot.loc[pivot.sum(axis=1).sort_values(ascending=False).index]
- 
-        # Percentage annotations
-        pivot_pct = pivot.div(pivot.sum(axis=1), axis=0).mul(100).round(1)
-        annotation_text = pivot.astype(str) + "<br>(" + pivot_pct.astype(str) + "%)"
- 
-        fig_heat = go.Figure(
-            go.Heatmap(
-                z=pivot.values,
-                x=pivot.columns.tolist(),
-                y=pivot.index.tolist(),
-                colorscale="Greens",
-                text=annotation_text.values,
-                texttemplate="%{text}",
-                textfont={"size": 11},
-                hoverongaps=False,
-                showscale=True,
-                colorbar=dict(title="Customers"),
-            )
-        )
-        fig_heat.update_layout(
-            xaxis_title="Bank",
-            yaxis_title="Branch / Market",
-            height=max(380, len(pivot) * 40 + 120),
-            plot_bgcolor="rgba(0,0,0,0)",
-            paper_bgcolor="rgba(0,0,0,0)",
-            margin=dict(t=20, b=80, l=150, r=20),
-            xaxis=dict(tickangle=-30, automargin=True),
-        )
-        st.plotly_chart(fig_heat, use_container_width=True)
- 
-        # Raw pivot table below heatmap
-        with st.expander("📋 Full Bank × Branch breakdown table"):
-            display_pivot = pivot.copy()
-            display_pivot["Total"] = display_pivot.sum(axis=1)
-            st.dataframe(
-                display_pivot.style.background_gradient(
-                    cmap="Greens", axis=None, subset=pivot.columns.tolist()
-                ).format(precision=0),
-                use_container_width=True,
-            )
- 
-    # ── TAB 3: Donut / share ──────────────────────────────────────────────────
-    with chart_tab3:
-        col_pie1, col_pie2 = st.columns(2)
- 
-        with col_pie1:
-            st.markdown("**Overall bank share across all branches**")
-            bank_total = chart_df["Bank"].value_counts().reset_index()
-            bank_total.columns = ["Bank", "Customers"]
-            fig_donut = px.pie(
-                bank_total,
-                values="Customers",
-                names="Bank",
-                hole=0.4,
-                color_discrete_sequence=px.colors.qualitative.Set2,
-            )
-            fig_donut.update_traces(textposition="inside", textinfo="percent+label")
-            fig_donut.update_layout(
-                showlegend=True,
-                legend=dict(orientation="v", x=1.0),
-                margin=dict(t=20, b=20, l=20, r=20),
-                plot_bgcolor="rgba(0,0,0,0)",
-                paper_bgcolor="rgba(0,0,0,0)",
-            )
-            st.plotly_chart(fig_donut, use_container_width=True)
- 
-        with col_pie2:
-            st.markdown("**Select a branch to see its bank breakdown**")
-            branch_list = sorted(chart_df["Source_Channel"].unique().tolist())
-            selected_b = st.selectbox("Branch:", branch_list, key="pie_branch_select")
-            branch_bank_data = (
-                chart_df[chart_df["Source_Channel"] == selected_b]["Bank"]
-                .value_counts()
+        fig_s = go.Figure()
+        for bank in banks_by_freq:
+            sub = (
+                bb[bb["Bank"] == bank]
+                .set_index("Source_Channel")
+                .reindex(branch_order, fill_value=0)
                 .reset_index()
             )
-            branch_bank_data.columns = ["Bank", "Customers"]
-            if not branch_bank_data.empty:
-                fig_b_donut = px.pie(
-                    branch_bank_data,
-                    values="Customers",
-                    names="Bank",
-                    hole=0.4,
-                    color_discrete_sequence=px.colors.qualitative.Pastel,
-                    title=f"{selected_b}",
-                )
-                fig_b_donut.update_traces(textposition="inside", textinfo="percent+label")
-                fig_b_donut.update_layout(
-                    margin=dict(t=40, b=20, l=20, r=20),
-                    plot_bgcolor="rgba(0,0,0,0)",
-                    paper_bgcolor="rgba(0,0,0,0)",
-                )
-                st.plotly_chart(fig_b_donut, use_container_width=True)
+            fig_s.add_trace(go.Bar(
+                name=bank,
+                x=sub["Source_Channel"],
+                y=sub["n"],
+                marker_color=color_map[bank],
+                text=sub["n"].where(sub["n"] > 0, "").astype(str).str.replace("0",""),
+                textposition="inside",
+                insidetextanchor="middle",
+                textfont=dict(size=11, color="white"),
+                hovertemplate=f"<b>{bank}</b><br>%{{x}}: %{{y}} customers<extra></extra>",
+            ))
  
-    # ── Top-N Branch × Bank bar race ──────────────────────────────────────────
-    st.markdown("#### 🏆 Top Branches by Bank Volume")
-    all_banks_sorted = (
-        bank_branch_count.groupby("Bank")["Customers"]
-        .sum()
-        .sort_values(ascending=False)
-        .index.tolist()
-    )
-    selected_bank_focus = st.selectbox(
-        "Focus on a specific bank:", ["All Banks"] + all_banks_sorted, key="bank_focus"
-    )
- 
-    if selected_bank_focus == "All Banks":
-        top_df = (
-            bank_branch_count.groupby("Source_Channel")["Customers"]
-            .sum()
-            .reset_index()
-            .sort_values("Customers", ascending=True)
-            .tail(15)
+        fig_s.update_layout(
+            barmode="stack",
+            height=420,
+            margin=dict(t=8, b=90, l=8, r=8),
+            paper_bgcolor="rgba(0,0,0,0)",
+            plot_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(
+                tickangle=-38, tickfont=dict(size=11), showgrid=False,
+                categoryorder="array", categoryarray=branch_order,
+            ),
+            yaxis=dict(
+                showgrid=True, gridcolor="#E6EEE9", zeroline=False,
+                title=dict(text="Customers", font=dict(size=12)),
+                tickfont=dict(size=11),
+            ),
+            legend=dict(
+                orientation="h", yanchor="bottom", y=1.01,
+                xanchor="left", x=0,
+                font=dict(size=12),
+                bgcolor="rgba(0,0,0,0)",
+                itemwidth=40,
+            ),
+            hoverlabel=dict(bgcolor="white", font_size=13),
+            bargap=0.18,
         )
-        fig_top = px.bar(
-            top_df,
-            x="Customers",
-            y="Source_Channel",
-            orientation="h",
-            height=max(350, len(top_df) * 35 + 80),
-            color="Customers",
-            color_continuous_scale="Greens",
-            labels={"Source_Channel": "Branch / Market"},
-            text="Customers",
+        st.plotly_chart(fig_s, use_container_width=True, config={"displayModeBar": False})
+ 
+    # ── Pivot table (collapsed by default) ───────────────────────────────────
+    with st.expander("📋 Full Branch × Bank breakdown table"):
+        pivot = (
+            df.groupby(["Source_Channel", "Bank"])
+            .size()
+            .unstack(fill_value=0)
         )
-    else:
-        top_df = (
-            bank_branch_count[bank_branch_count["Bank"] == selected_bank_focus]
-            .sort_values("Customers", ascending=True)
-            .tail(15)
-        )
-        fig_top = px.bar(
-            top_df,
-            x="Customers",
-            y="Source_Channel",
-            orientation="h",
-            height=max(350, len(top_df) * 35 + 80),
-            color="Customers",
-            color_continuous_scale="Blues",
-            labels={"Source_Channel": "Branch / Market"},
-            text="Customers",
-            title=f"Top branches for {selected_bank_focus}",
+        pivot.index.name = "Branch"
+        pivot["Total"] = pivot.sum(axis=1)
+        pivot = pivot.sort_values("Total", ascending=False)
+ 
+        bank_cols = [c for c in pivot.columns if c != "Total"]
+        st.dataframe(
+            pivot.style
+                .background_gradient(cmap="Greens", subset=bank_cols, axis=None)
+                .format(precision=0)
+                .set_properties(**{"text-align": "center"})
+                .set_table_styles([
+                    {"selector": "th", "props": [
+                        ("background-color", G_MID),
+                        ("color", "white"),
+                        ("font-weight", "bold"),
+                    ]},
+                    {"selector": "td:last-child", "props": [
+                        ("font-weight", "700"),
+                        ("color", G_DARK),
+                    ]},
+                ]),
+            use_container_width=True,
         )
  
-    fig_top.update_layout(
-        plot_bgcolor="rgba(0,0,0,0)",
-        paper_bgcolor="rgba(0,0,0,0)",
-        margin=dict(t=40, b=40, l=10, r=40),
-        coloraxis_showscale=False,
-        xaxis=dict(showgrid=True, gridcolor="rgba(128,128,128,0.15)"),
-    )
-    fig_top.update_traces(textposition="outside", textfont_size=12)
-    st.plotly_chart(fig_top, use_container_width=True)
  
- 
-# === Main App ===
+# ══════════════════════════════════════════════════════════════════════════════
+# MAIN
+# ══════════════════════════════════════════════════════════════════════════════
 def main():
-    # Sidebar
-    if st.sidebar.button("🧹 Clear Cache"):
-        st.cache_resource.clear()
-        st.cache_data.clear()
-        st.success("Cache cleared successfully!")
  
+    # ── Sidebar ───────────────────────────────────────────────────────────────
     with st.sidebar:
-        st.header("🔧 Debug Info")
-        st.write("Available secrets:", list(st.secrets.keys()))
+        st.markdown("### ⚙️ Controls")
+        if st.button("🧹 Clear Cache", use_container_width=True):
+            st.cache_resource.clear()
+            st.cache_data.clear()
+            st.success("Cache cleared!")
+        st.markdown("---")
+        st.markdown("**Secrets keys:**")
+        st.write(list(st.secrets.keys()))
  
-    # Header
+    # ── Banner ────────────────────────────────────────────────────────────────
+    today_label = datetime.now(pytz.timezone("Asia/Phnom_Penh")).strftime("%d %B %Y")
     st.markdown(
-        """
-    <div class="main-header">
-        <h1>📊 Sales Performance Dashboard</h1>
-        <p>CMCB Bank — Customer Portfolio & Market Visit Report</p>
-    </div>
-    """,
+        f"""
+        <div class="banner">
+            <h1>📊 Sales Performance Dashboard</h1>
+            <p>CMCB Bank &nbsp;·&nbsp; Customer Portfolio &amp; Market Visit Report &nbsp;·&nbsp; {today_label}</p>
+        </div>
+        """,
         unsafe_allow_html=True,
     )
  
-    tab = st.tabs(["📍 Market Visit Presentation"])[0]
+    # ── Load ──────────────────────────────────────────────────────────────────
+    with st.spinner("Loading data…"):
+        raw_df = get_telegram_data()
  
-    with tab:
-        st.markdown(
-            """
-        <div class="function-card">
-            <h2>👥 Customer Portfolio Presentation</h2>
+    if raw_df.empty:
+        st.info("💡 No data found. Check your Google Sheets connection and secrets.")
+        with st.expander("🆕 Setup guide"):
+            st.markdown("""
+            1. Share the Google Sheet with your service account email.
+            2. Set `sheet_id` and `worksheet_name` in Streamlit secrets.
+            3. Add `service_account` credentials block to secrets.
+            """)
+        return
+ 
+    display_df = prepare_display_df(raw_df)
+ 
+    # ── Filters ───────────────────────────────────────────────────────────────
+    st.markdown('<div class="card"><h3>🔍 Filter Portfolio</h3></div>', unsafe_allow_html=True)
+    f1, f2, f3 = st.columns([1, 1, 2])
+ 
+    all_branches = (
+        sorted(display_df["Source_Channel"].dropna().unique().tolist())
+        if "Source_Channel" in display_df.columns else []
+    )
+ 
+    with f1:
+        selected_potential = st.selectbox("Customer Potential", ["All", "H", "M", "L"])
+    with f2:
+        selected_branch = st.selectbox("Branch / Market", ["All"] + all_branches)
+    with f3:
+        tz_now = datetime.now(pytz.timezone("Asia/Phnom_Penh")).date()
+        d_mode = st.radio("Date range", ["Today", "Custom"], horizontal=True)
+        if d_mode == "Today":
+            start_date = end_date = tz_now
+        else:
+            if "Message_Date" in display_df.columns and display_df["Message_Date"].notna().any():
+                min_d = display_df["Message_Date"].min().date()
+                max_d = display_df["Message_Date"].max().date()
+            else:
+                min_d = max_d = tz_now
+            dc1, dc2 = st.columns(2)
+            start_date = dc1.date_input("From", min_d, min_value=min_d, max_value=max_d)
+            end_date   = dc2.date_input("To",   max_d, min_value=min_d, max_value=max_d)
+ 
+    # ── Apply filters ─────────────────────────────────────────────────────────
+    fdf = display_df.copy()
+    if selected_potential != "All" and "Potential_Level" in fdf.columns:
+        fdf = fdf[fdf["Potential_Level"].str.upper() == selected_potential]
+    if selected_branch != "All" and "Source_Channel" in fdf.columns:
+        fdf = fdf[fdf["Source_Channel"] == selected_branch]
+    if "Message_Date" in fdf.columns:
+        fdf = fdf[
+            (fdf["Message_Date"].dt.date >= start_date) &
+            (fdf["Message_Date"].dt.date <= end_date)
+        ]
+ 
+    # ── Portfolio KPIs ────────────────────────────────────────────────────────
+    total = len(fdf)
+    h_cnt = len(fdf[fdf["Potential_Level"].str.upper() == "H"]) if "Potential_Level" in fdf.columns else 0
+    m_cnt = len(fdf[fdf["Potential_Level"].str.upper() == "M"]) if "Potential_Level" in fdf.columns else 0
+    l_cnt = len(fdf[fdf["Potential_Level"].str.upper() == "L"]) if "Potential_Level" in fdf.columns else 0
+    h_pct = f"{h_cnt/total*100:.0f}%" if total else "—"
+ 
+    st.markdown(
+        f"""
+        <div class="kpi-row">
+            <div class="kpi">
+                <div class="val">{total}</div>
+                <div class="lbl">Total Customers</div>
+            </div>
+            <div class="kpi red">
+                <div class="val">{h_cnt}</div>
+                <div class="lbl">High Potential ({h_pct})</div>
+            </div>
+            <div class="kpi amber">
+                <div class="val">{m_cnt}</div>
+                <div class="lbl">Medium Potential</div>
+            </div>
+            <div class="kpi">
+                <div class="val">{l_cnt}</div>
+                <div class="lbl">Low Potential</div>
+            </div>
         </div>
         """,
+        unsafe_allow_html=True,
+    )
+ 
+    # ══════════════════════════════════════════════════════════════════════════
+    # BANK × BRANCH SECTION
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown(
+        '<div class="card"><h3>🏦 Bank Information Gathered from the Market</h3></div>',
+        unsafe_allow_html=True,
+    )
+    render_bank_charts(fdf)
+ 
+    st.markdown("---")
+ 
+    # ══════════════════════════════════════════════════════════════════════════
+    # CUSTOMER TABLE
+    # ══════════════════════════════════════════════════════════════════════════
+    st.markdown(
+        f'<div class="card"><h3>👥 Customer Portfolio &nbsp;·&nbsp; {total} records</h3></div>',
+        unsafe_allow_html=True,
+    )
+ 
+    if total == 0:
+        st.warning("No customers match the selected filters.")
+    else:
+        vis_cols = [
+            "Name","Tel","Bank","Business","Amount","Interest",
+            "Loan_Type","Tenure","Maturity","Potential_Level","Potential_Product","Remark",
+        ]
+        tdf = fdf[[c for c in vis_cols if c in fdf.columns]].copy()
+ 
+        pot_order = {"H":1,"M":2,"L":3}
+        info_cols = ["Amount","Bank","Interest","Loan_Type","Tenure","Maturity"]
+        tdf["_p"] = tdf.get("Potential_Level", pd.Series(dtype=str)).map(pot_order).fillna(4)
+        tdf["_i"] = tdf[[c for c in info_cols if c in tdf.columns]].apply(
+            lambda r: sum(bool(str(x).strip()) for x in r), axis=1
+        )
+        tdf = tdf.sort_values(["_p","_i"], ascending=[True,False]).drop(columns=["_p","_i"])
+        tdf = tdf.rename(columns={
+            "Potential_Level": "Potential",
+            "Potential_Product": "Product",
+            "Loan_Type": "Loan Type",
+        })
+ 
+        st.write(
+            style_table(tdf).hide(axis="index").to_html(escape=False),
             unsafe_allow_html=True,
         )
  
-        telegram_df = get_telegram_data()
- 
-        if not telegram_df.empty:
-            required_columns = [
-                "Sender_Name",
-                "Name",
-                "Tel",
-                "Bank",
-                "Business",
-                "Amount",
-                "Interest",
-                "Loan_Type",
-                "Tenure",
-                "Maturity",
-                "Potential_Level",
-                "Potential_Product",
-                "Source_Channel",
-                "Message_Date",
-                "Remark",
-            ]
-            available_columns = [c for c in required_columns if c in telegram_df.columns]
-            display_df = telegram_df[available_columns].copy()
- 
-            # ── Format data ────────────────────────────────────────────────────
-            def format_sales_data(df):
-                df_f = df.copy()
-                if "Tel" in df_f.columns:
-                    df_f["Tel"] = df_f["Tel"].astype(str).apply(
-                        lambda x: f"0{x}" if x and not x.startswith("0") else x if x else ""
-                    )
-                if "Amount" in df_f.columns:
-                    df_f["Amount"] = df_f["Amount"].apply(format_amount)
-                if "Interest" in df_f.columns:
-                    df_f["Interest"] = df_f["Interest"].apply(format_interest)
-                for col in ["Name", "Business", "Bank", "Loan_Type", "Maturity", "Tenure"]:
-                    if col in df_f.columns:
-                        df_f[col] = df_f[col].astype(str).fillna("").replace("N/A", "")
-                if "Message_Date" in df_f.columns:
-                    df_f["Message_Date"] = pd.to_datetime(df_f["Message_Date"], errors="coerce")
-                return df_f
- 
-            display_df = format_sales_data(display_df)
- 
-            # ── Filters ────────────────────────────────────────────────────────
-            st.markdown("### 🔍 Filter Portfolio")
-            col1, col2, col3 = st.columns(3)
- 
-            today_ts = pd.Timestamp.now().normalize()
-            if "Message_Date" in display_df.columns:
-                display_df["Message_Date"] = pd.to_datetime(
-                    display_df["Message_Date"], errors="coerce"
-                ).dt.normalize()
-                today_df = display_df[display_df["Message_Date"] == today_ts]
-                today_branches = sorted(
-                    today_df["Source_Channel"].dropna().unique().tolist()
-                )
-            else:
-                today_branches = sorted(
-                    display_df["Source_Channel"].dropna().unique().tolist()
-                )
- 
-            if "presentation_branches" not in st.session_state:
-                st.session_state.presentation_branches = random.sample(
-                    today_branches, min(12, len(today_branches))
-                )
- 
-            all_branches = sorted(
-                display_df["Source_Channel"].dropna().unique().tolist()
+        st.markdown("&nbsp;")
+        a1, a2, a3 = st.columns(3)
+        with a1:
+            st.download_button(
+                "📥 Download Filtered Data",
+                data=fdf.to_csv(index=False),
+                file_name="filtered_portfolio.csv",
+                mime="text/csv",
+                use_container_width=True,
             )
- 
-            with col1:
-                selected_potential = st.selectbox(
-                    "Customer Potential:", ["All", "H", "M", "L"]
-                )
-            with col2:
-                selected_branch = st.selectbox(
-                    "📊 Presentation Branch (10 Branch Report)",
-                    ["All"] + all_branches,
-                )
-            with col3:
-                today = datetime.now(pytz.timezone("Asia/Phnom_Penh")).date()
-                date_filter_type = st.radio(
-                    "Date Filter:", ["Today", "Date Range"], horizontal=True
-                )
-                if date_filter_type == "Today":
-                    start_date = end_date = today
-                else:
-                    min_date = display_df["Message_Date"].min().date()
-                    max_date = display_df["Message_Date"].max().date()
-                    start_date = st.date_input(
-                        "From:", min_date, min_value=min_date, max_value=max_date
-                    )
-                    end_date = st.date_input(
-                        "To:", max_date, min_value=min_date, max_value=max_date
-                    )
- 
-            # ── Apply filters ──────────────────────────────────────────────────
-            filtered_df = display_df.copy()
-            if selected_potential != "All" and "Potential_Level" in filtered_df.columns:
-                filtered_df = filtered_df[
-                    filtered_df["Potential_Level"].str.upper() == selected_potential
-                ]
-            if selected_branch != "All":
-                filtered_df = filtered_df[
-                    filtered_df["Source_Channel"] == selected_branch
-                ]
-            if "Message_Date" in filtered_df.columns:
-                filtered_df = filtered_df[
-                    (filtered_df["Message_Date"].dt.date >= start_date)
-                    & (filtered_df["Message_Date"].dt.date <= end_date)
-                ]
- 
-            # ── Quick stats ────────────────────────────────────────────────────
-            total_customers = len(filtered_df)
-            high_potential = (
-                len(filtered_df[filtered_df["Potential_Level"].str.strip().str.upper() == "H"])
-                if "Potential_Level" in filtered_df.columns
-                else 0
+        with a2:
+            st.download_button(
+                "📥 Download Display Table",
+                data=tdf.to_csv(index=False),
+                file_name="display_portfolio.csv",
+                mime="text/csv",
+                use_container_width=True,
             )
-            medium_potential = (
-                len(filtered_df[filtered_df["Potential_Level"].str.strip().str.upper() == "M"])
-                if "Potential_Level" in filtered_df.columns
-                else 0
-            )
+        with a3:
+            if st.button("🔄 Refresh Data", use_container_width=True):
+                st.cache_data.clear()
+                st.rerun()
  
-            st.markdown("### 📊 Customer Portfolio Overview")
-            c1, c2, c3, c4 = st.columns(4)
-            with c1:
-                st.metric("Total Customers", total_customers)
-            with c2:
-                st.metric(
-                    "High Potential",
-                    high_potential,
-                    delta=(
-                        f"{(high_potential / total_customers * 100):.1f}%"
-                        if total_customers
-                        else "0%"
-                    ),
-                )
-            with c3:
-                st.metric("Medium Potential", medium_potential)
- 
-            # ── BANK DISTRIBUTION CHARTS ──────────────────────────────────────
-            st.markdown("---")
-            render_bank_branch_charts(filtered_df)
-            st.markdown("---")
- 
-            # ── Customer table ─────────────────────────────────────────────────
-            st.markdown(f"### 👥 Showing {len(filtered_df)} Customers")
- 
-            if len(filtered_df) > 0:
-                visible_columns = [
-                    "Name", "Tel", "Bank", "Business", "Amount", "Interest",
-                    "Loan_Type", "Tenure", "Maturity", "Potential_Level",
-                    "Potential_Product", "Remark",
-                ]
-                table_df = filtered_df[
-                    [c for c in visible_columns if c in filtered_df.columns]
-                ].copy()
- 
-                sort_order = {"H": 1, "M": 2, "L": 3}
-                if "Potential_Level" in table_df.columns:
-                    table_df["_pot_ord"] = table_df["Potential_Level"].map(sort_order).fillna(4)
-                else:
-                    table_df["_pot_ord"] = 4
- 
-                info_columns = ["Amount", "Bank", "Interest", "Loan_Type", "Tenure", "Maturity"]
-                table_df["_info_score"] = table_df[
-                    [c for c in info_columns if c in table_df.columns]
-                ].apply(lambda row: sum(bool(str(x).strip()) for x in row), axis=1)
- 
-                table_df = table_df.sort_values(
-                    by=["_pot_ord", "_info_score"], ascending=[True, False]
-                ).drop(columns=["_pot_ord", "_info_score"])
- 
-                table_df = table_df.rename(
-                    columns={
-                        "Potential_Level": "Potential",
-                        "Potential_Product": "Product",
-                        "Loan_Type": "Loan Type",
-                    }
-                )
- 
-                styled_df = style_sales_dataframe(table_df)
-                st.write(
-                    styled_df.hide(axis="index").to_html(escape=False),
-                    unsafe_allow_html=True,
-                )
- 
-                # ── Actions ────────────────────────────────────────────────────
-                st.markdown("### 🚀 Sales Actions")
-                a1, a2, a3 = st.columns(3)
-                with a1:
-                    st.download_button(
-                        label="📥 Download Filtered Data",
-                        data=filtered_df.to_csv(index=False),
-                        file_name="filtered_customer_portfolio.csv",
-                        mime="text/csv",
-                        use_container_width=True,
-                    )
-                with a2:
-                    st.download_button(
-                        label="📥 Download Full Portfolio",
-                        data=table_df.to_csv(index=False),
-                        file_name="full_customer_portfolio.csv",
-                        mime="text/csv",
-                        use_container_width=True,
-                    )
-                with a3:
-                    if st.button("🔄 Refresh Data", use_container_width=True):
-                        st.rerun()
- 
-                # ── Quick insights ─────────────────────────────────────────────
-                st.markdown("### 💡 Quick Insights")
-                if "Potential_Level" in filtered_df.columns:
-                    i1, i2, i3 = st.columns(3)
-                    with i1:
-                        hp = len(
-                            filtered_df[
-                                filtered_df["Potential_Level"].str.strip().str.upper() == "H"
-                            ]
-                        )
-                        st.info(f"**High Potential:** {hp} customers need immediate follow-up")
-                    with i2:
-                        if "Loan_Type" in filtered_df.columns:
-                            popular_loan = filtered_df["Loan_Type"].mode()
-                            if len(popular_loan) > 0:
-                                st.info(f"**Popular Product:** {popular_loan[0]}")
-                    with i3:
-                        if "Bank" in filtered_df.columns:
-                            top_bk = filtered_df["Bank"].mode()
-                            if len(top_bk) > 0:
-                                st.info(f"**Top Bank in Market:** {top_bk[0]}")
- 
-            else:
-                st.warning(
-                    "No customers match the selected filters. Try adjusting your criteria."
-                )
- 
-        else:
-            st.info(
-                "💡 No customer data available. Please ensure data is pushed to Google Sheets first."
-            )
-            with st.expander("🆕 How to get started"):
-                st.markdown(
-                    """
-                **For Sales Team Presentation:**
-                1. Ensure customer data is pushed to Google Sheets via the 'Google Sheets Sync' tab
-                2. Data should include: Customer Name, Phone, Business Type, Potential Level
-                3. Contact admin if you need access to the Google Sheet
- 
-                **Required Columns for Optimal Presentation:**
-                - Name, Tel, Bank, Business, Amount, Interest
-                - Loan_Type, Tenure, Maturity
-                - Potential_Level, Potential_Product
-                - Source_Channel, Message_Date, Remark
-                """
-                )
- 
-    # Footer
-    st.markdown("---")
+    # ── Footer ────────────────────────────────────────────────────────────────
     st.markdown(
-        "<div style='text-align: center; color: #6c757d; margin-top: 30px;'>"
-        "Sales Performance Dashboard • CMCB Bank"
-        "</div>",
+        f"<div style='text-align:center;color:#9AB0A2;font-size:.8rem;margin-top:32px;'>"
+        f"Sales Performance Dashboard &nbsp;·&nbsp; CMCB Bank &nbsp;·&nbsp; {today_label}"
+        f"</div>",
         unsafe_allow_html=True,
     )
  
