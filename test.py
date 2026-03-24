@@ -5,12 +5,8 @@ from google.oauth2.service_account import Credentials
 import re
 import random
 import pytz
-import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
-import nest_asyncio
-import os
-import G_DARK
 # ══════════════════════════════════════════════════════════════════════════════
 # GLOBAL CSS
 # ══════════════════════════════════════════════════════════════════════════════
