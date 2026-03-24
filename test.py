@@ -34,10 +34,6 @@ api_hash = "4b1394e0f07625a3c25ea32fa3030218"
 # phone_number = os.environ["PHONE_NUMBER"]
 # target = ["https://t.me/+JeQdy_3JC20wYTY1"]
 session_name = "customer_session_2"
-
-G_DARK  = "#1B6B3A"
-G_MID   = "#2E8B57"
-G_LIGHT = "#3CB371"
  
 # ══════════════════════════════════════════════════════════════════════════════
 # COLOUR CONSTANTS
