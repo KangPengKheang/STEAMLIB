@@ -18,8 +18,8 @@ st.set_page_config(
 
 # from oauth2client.service_account import ServiceAccountCredentials
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SHEET_ID = "1wM7DTHizhg_A3h0qV3EhX4os4hk46uolW-ESQSJkgZs"
-WORKSHEET_NAME = "retail_data"
+sheet_id = "1wM7DTHizhg_A3h0qV3EhX4os4hk46uolW-ESQSJkgZs"
+worksheet_name = "retail_data"
 
 # === MUST BE THE FIRST STREAMLIT COMMAND ===
 st.set_page_config(
