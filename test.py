@@ -17,14 +17,14 @@ st.set_page_config(
     layout="wide",
 )
 
-# # from oauth2client.service_account import ServiceAccountCredentials
-# BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# SHEET_ID = "1wM7DTHizhg_A3h0qV3EhX4os4hk46uolW-ESQSJkgZs"
-# WORKSHEET_NAME = "retail_data"
+# from oauth2client.service_account import ServiceAccountCredentials
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SHEET_ID = "1wM7DTHizhg_A3h0qV3EhX4os4hk46uolW-ESQSJkgZs"
+WORKSHEET_NAME = "retail_data"
 
-# === Constants ===
-SHEET_ID = st.secrets.get("1wM7DTHizhg_A3h0qV3EhX4os4hk46uolW-ESQSJkgZs", "")
-WORKSHEET_NAME = st.secrets.get("retail_data", "Sheet1")
+# # === Constants ===
+# SHEET_ID = st.secrets.get("1wM7DTHizhg_A3h0qV3EhX4os4hk46uolW-ESQSJkgZs", "")
+# WORKSHEET_NAME = st.secrets.get("retail_data", "Sheet1")
 
 # === MUST BE THE FIRST STREAMLIT COMMAND ===
 st.set_page_config(
