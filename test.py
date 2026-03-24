@@ -50,6 +50,7 @@ C_LOW   = "#2E8B57"   # green — L potential
 SHEET_ID       = st.secrets.get("sheet_id", "")
 WORKSHEET_NAME = st.secrets.get("worksheet_name", "Sheet1")
  
+# ══════════════════════════════════════════════════════════════════════════════
 # CSS  (no f-string — plain string concat avoids brace conflicts)
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
@@ -111,7 +112,6 @@ def connect_to_google_sheets():
     try:
         scope = [
             "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive",
         ]
         if "service_account" not in st.secrets:
             st.error("❌ Google Sheets credentials not found in secrets.")
@@ -130,14 +130,20 @@ def connect_to_google_sheets():
  
 def load_sheet_data(_gc, sheet_id, worksheet_name):
     try:
-        data = _gc.open_by_key(sheet_id).worksheet(worksheet_name).get_all_records()
+        spreadsheet = _gc.open_by_key(sheet_id)
+        sheet       = spreadsheet.worksheet(worksheet_name)
+        data        = sheet.get_all_records()
         return pd.DataFrame(data) if data else pd.DataFrame()
     except gspread.SpreadsheetNotFound:
-        st.error(f"❌ Spreadsheet not found: {sheet_id}"); return pd.DataFrame()
+        st.error(f"❌ Spreadsheet not found. ID used: `{sheet_id}`")
+        st.info("Make sure the sheet is shared with your service account email shown in the sidebar.")
+        return pd.DataFrame()
     except gspread.exceptions.WorksheetNotFound:
-        st.error(f"❌ Worksheet not found: {worksheet_name}"); return pd.DataFrame()
+        st.error(f"❌ Worksheet `{worksheet_name}` not found in the spreadsheet.")
+        return pd.DataFrame()
     except Exception as e:
-        st.error(f"❌ Load error: {e}"); return pd.DataFrame()
+        st.error(f"❌ Load error: {e}")
+        return pd.DataFrame()
  
  
 @st.cache_data
