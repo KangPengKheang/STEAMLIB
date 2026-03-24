@@ -9,6 +9,12 @@ import plotly.graph_objects as go
 from datetime import datetime
 import os
 
+st.set_page_config(
+    page_title="Sales Performance Dashboard",
+    page_icon="📊",
+    layout="wide",
+)
+
 # from oauth2client.service_account import ServiceAccountCredentials
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SHEET_ID = "1wM7DTHizhg_A3h0qV3EhX4os4hk46uolW-ESQSJkgZs"
