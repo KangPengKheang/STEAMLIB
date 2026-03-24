@@ -50,7 +50,6 @@ C_LOW   = "#2E8B57"   # green — L potential
 SHEET_ID       = st.secrets.get("sheet_id", "")
 WORKSHEET_NAME = st.secrets.get("worksheet_name", "Sheet1")
  
-# ══════════════════════════════════════════════════════════════════════════════
 # CSS  (no f-string — plain string concat avoids brace conflicts)
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
@@ -112,7 +111,7 @@ def connect_to_google_sheets():
     try:
         scope = [
             "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive.file",
+            "https://www.googleapis.com/auth/drive",
         ]
         if "service_account" not in st.secrets:
             st.error("❌ Google Sheets credentials not found in secrets.")
@@ -377,6 +376,13 @@ def main():
         st.markdown("---")
         st.markdown("**Secrets keys:**")
         st.write(list(st.secrets.keys()))
+        st.markdown("**Sheet ID:**")
+        st.code(SHEET_ID)
+        st.markdown("**Worksheet:**")
+        st.code(WORKSHEET_NAME)
+        if "service_account" in st.secrets:
+            st.markdown("**Service account email:**")
+            st.code(st.secrets["service_account"].get("client_email", "not found"))
  
     # ── Banner ────────────────────────────────────────────────────────────────
     today_label = datetime.now(pytz.timezone("Asia/Phnom_Penh")).strftime("%d %B %Y")
