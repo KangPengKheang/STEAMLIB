@@ -3,37 +3,28 @@ import pandas as pd
 import gspread
 from google.oauth2.service_account import Credentials
 import re
-import random
 import pytz
 import plotly.graph_objects as go
+import plotly.express as px
 from datetime import datetime
 import os
-import nest_asyncio
-
+ 
+# ══════════════════════════════════════════════════════════════════════════════
+# PAGE CONFIG  — must be the FIRST Streamlit call, called exactly ONCE
+# ══════════════════════════════════════════════════════════════════════════════
 st.set_page_config(
     page_title="Sales Performance Dashboard",
     page_icon="📊",
     layout="wide",
 )
-
+ 
+# ══════════════════════════════════════════════════════════════════════════════
+# SHEET CONFIG  — read from secrets only (no hardcoded IDs)
+# ══════════════════════════════════════════════════════════════════════════════
 # from oauth2client.service_account import ServiceAccountCredentials
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SHEET_ID = "1wM7DTHizhg_A3h0qV3EhX4os4hk46uolW-ESQSJkgZs"
 WORKSHEET_NAME = "retail_data"
-
-# === MUST BE THE FIRST STREAMLIT COMMAND ===
-st.set_page_config(
-    page_title="Sales Performance Dashboard", layout="wide", page_icon="📊"
-)
-
-nest_asyncio.apply()
-
-# Your credentials
-api_id = 20056320
-api_hash = "4b1394e0f07625a3c25ea32fa3030218"
-# phone_number = os.environ["PHONE_NUMBER"]
-# target = ["https://t.me/+JeQdy_3JC20wYTY1"]
-session_name = "customer_session_2"
  
 # ══════════════════════════════════════════════════════════════════════════════
 # COLOUR CONSTANTS
@@ -43,63 +34,93 @@ G_MID   = "#2E8B57"
 G_LIGHT = "#3CB371"
 G_PALE  = "#E8F5EE"
  
-C_HIGH  = "#E53935"   # red   — H potential
-C_MED   = "#F59E0B"   # amber — M potential
-C_LOW   = "#2E8B57"   # green — L potential
- 
-SHEET_ID       = st.secrets.get("sheet_id", "")
-WORKSHEET_NAME = st.secrets.get("worksheet_name", "Sheet1")
+C_HIGH  = "#E53935"
+C_MED   = "#F59E0B"
+C_LOW   = "#2E8B57"
  
 # ══════════════════════════════════════════════════════════════════════════════
-# CSS  (no f-string — plain string concat avoids brace conflicts)
+# CSS
 # ══════════════════════════════════════════════════════════════════════════════
 st.markdown("""
 <style>
-[data-testid="stAppViewContainer"] { background: #F4F7F5; }
-[data-testid="stSidebar"]          { background: #fff; border-right: 1px solid #E0EAE4; }
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+ 
+* { font-family: 'DM Sans', sans-serif; }
+ 
+[data-testid="stAppViewContainer"] { background: #F0F4F2; }
+[data-testid="stSidebar"]          { background: #fff; border-right: 1px solid #D8E8E0; }
  
 .banner {
-    background: linear-gradient(135deg, #1B6B3A 0%, #3CB371 100%);
-    padding: 26px 34px; border-radius: 16px; color: #fff; margin-bottom: 24px;
+    background: linear-gradient(135deg, #0F4727 0%, #1B6B3A 45%, #3CB371 100%);
+    padding: 30px 38px; border-radius: 18px; color: #fff; margin-bottom: 26px;
+    box-shadow: 0 8px 32px rgba(27,107,58,0.25);
+    position: relative; overflow: hidden;
 }
-.banner h1 { margin: 0 0 4px 0; font-size: 1.8rem; font-weight: 700; }
-.banner p  { margin: 0; opacity: .82; font-size: 0.9rem; }
+.banner::before {
+    content: ""; position: absolute; top: -40px; right: -40px;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: rgba(255,255,255,0.06);
+}
+.banner::after {
+    content: ""; position: absolute; bottom: -60px; right: 80px;
+    width: 150px; height: 150px; border-radius: 50%;
+    background: rgba(255,255,255,0.04);
+}
+.banner h1 { margin: 0 0 6px 0; font-size: 1.9rem; font-weight: 700; letter-spacing: -0.3px; }
+.banner p  { margin: 0; opacity: .80; font-size: 0.88rem; font-weight: 500; }
+.banner .badge {
+    display: inline-block; background: rgba(255,255,255,0.18);
+    border-radius: 20px; padding: 3px 12px; font-size: 0.78rem;
+    font-weight: 600; letter-spacing: 0.04em; margin-top: 10px;
+    border: 1px solid rgba(255,255,255,0.25);
+}
  
 .section {
-    background: #fff; border-radius: 14px; padding: 20px 24px;
-    margin-bottom: 20px; border-left: 5px solid #2E8B57;
-    box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    background: #fff; border-radius: 16px; padding: 22px 26px;
+    margin-bottom: 22px; border-left: 5px solid #2E8B57;
+    box-shadow: 0 2px 12px rgba(0,0,0,.05);
 }
 .section-title {
     font-size: 1rem; font-weight: 700; color: #1B6B3A;
-    margin: 0 0 16px 0; display: flex; align-items: center; gap: 8px;
+    margin: 0 0 18px 0; display: flex; align-items: center; gap: 8px;
 }
  
 /* KPI tiles */
 .kpi-row { display:flex; gap:14px; flex-wrap:wrap; margin-bottom:22px; }
 .kpi {
-    flex:1; min-width:110px; background:#fff; border-radius:12px;
-    padding:15px 16px; text-align:center;
-    box-shadow: 0 2px 6px rgba(0,0,0,.07);
+    flex:1; min-width:120px; background:#fff; border-radius:14px;
+    padding:18px 18px; text-align:center;
+    box-shadow: 0 2px 10px rgba(0,0,0,.07);
     border-top: 4px solid #2E8B57;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
-.kpi .val { font-size:1.85rem; font-weight:700; color:#1B6B3A; line-height:1.1; }
-.kpi .lbl { font-size:0.72rem; color:#6B8C7A; margin-top:4px;
-            text-transform:uppercase; letter-spacing:.05em; }
+.kpi:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,.10); }
+.kpi .val { font-size:2rem; font-weight:700; color:#1B6B3A; line-height:1.1; letter-spacing:-1px; }
+.kpi .lbl { font-size:0.70rem; color:#6B8C7A; margin-top:5px;
+            text-transform:uppercase; letter-spacing:.07em; font-weight:600; }
 .kpi.red   { border-top-color:#E53935; }
 .kpi.red .val { color:#C62828; }
 .kpi.amber { border-top-color:#F59E0B; }
 .kpi.amber .val { color:#B45309; }
 .kpi.blue  { border-top-color:#2563EB; }
 .kpi.blue .val  { color:#1E40AF; }
+.kpi.purple { border-top-color:#7C3AED; }
+.kpi.purple .val { color:#5B21B6; }
+ 
+/* Divider */
+.divider { height: 1px; background: linear-gradient(90deg, #E0EAE4 0%, transparent 100%); margin: 6px 0 20px 0; }
  
 /* Buttons */
 .stButton>button {
     background: linear-gradient(135deg, #1B6B3A 0%, #3CB371 100%);
-    color:#fff; border:none; border-radius:8px; font-weight:600;
-    padding:10px 20px; transition:opacity .2s;
+    color:#fff; border:none; border-radius:9px; font-weight:600;
+    padding:10px 22px; transition: opacity .2s, transform .15s;
+    font-family: 'DM Sans', sans-serif;
 }
-.stButton>button:hover { opacity:.86; }
+.stButton>button:hover { opacity:.88; transform: translateY(-1px); }
+ 
+/* Selectbox / inputs */
+.stSelectbox > div > div { border-radius: 9px; border-color: #C8DDD4; }
 </style>
 """, unsafe_allow_html=True)
  
@@ -110,9 +131,7 @@ st.markdown("""
 @st.cache_resource
 def connect_to_google_sheets():
     try:
-        scope = [
-            "https://www.googleapis.com/auth/spreadsheets",
-        ]
+        scope = ["https://www.googleapis.com/auth/spreadsheets"]
         if "service_account" not in st.secrets:
             st.error("❌ Google Sheets credentials not found in secrets.")
             return None
@@ -128,9 +147,9 @@ def connect_to_google_sheets():
         return None
  
  
-def load_sheet_data(_gc, sheet_id, worksheet_name):
+def load_sheet_data(gc, sheet_id, worksheet_name):
     try:
-        spreadsheet = _gc.open_by_key(sheet_id)
+        spreadsheet = gc.open_by_key(sheet_id)
         sheet       = spreadsheet.worksheet(worksheet_name)
         data        = sheet.get_all_records()
         return pd.DataFrame(data) if data else pd.DataFrame()
@@ -146,10 +165,12 @@ def load_sheet_data(_gc, sheet_id, worksheet_name):
         return pd.DataFrame()
  
  
-@st.cache_data
-def get_telegram_data():
+@st.cache_data(ttl=300)
+def get_sheet_data():
     gc = connect_to_google_sheets()
-    return load_sheet_data(gc, SHEET_ID, WORKSHEET_NAME) if gc else pd.DataFrame()
+    if gc is None:
+        return pd.DataFrame()
+    return load_sheet_data(gc, SHEET_ID, WORKSHEET_NAME)
  
  
 # ══════════════════════════════════════════════════════════════════════════════
@@ -210,7 +231,7 @@ def prepare_df(raw):
  
  
 # ══════════════════════════════════════════════════════════════════════════════
-# TABLE STYLER  (original — kept exactly as requested)
+# TABLE STYLER
 # ══════════════════════════════════════════════════════════════════════════════
 def style_table(df):
     def row_bg(row):
@@ -261,7 +282,7 @@ def style_table(df):
  
  
 # ══════════════════════════════════════════════════════════════════════════════
-# CHART 1 — Scrollable Cases per Branch (stacked H / M / L)
+# CHART 1 — Cases per Branch (stacked H / M / L) — FIXED
 # ══════════════════════════════════════════════════════════════════════════════
 def chart_cases_by_branch(fdf):
     if "Source_Channel" not in fdf.columns:
@@ -272,7 +293,6 @@ def chart_cases_by_branch(fdf):
     df["_pot"] = df.get("Potential_Level", pd.Series("", index=df.index)) \
                    .str.strip().str.upper().replace("", "?")
  
-    # Count per branch × potential
     grp = (
         df.groupby(["Source_Channel", "_pot"])
         .size()
@@ -282,13 +302,12 @@ def chart_cases_by_branch(fdf):
     branch_order     = total_per_branch.sort_values(ascending=True).index.tolist()
     n_branches       = len(branch_order)
  
-    # Dynamic height — 44px per branch, min 300px
     bar_height = max(320, n_branches * 44 + 80)
  
     POT_CFG = {
-        "H": {"color": C_HIGH,  "label": "High (H)"},
-        "M": {"color": C_MED,   "label": "Medium (M)"},
-        "L": {"color": C_LOW,   "label": "Low (L)"},
+        "H": {"color": C_HIGH,   "label": "High (H)"},
+        "M": {"color": C_MED,    "label": "Medium (M)"},
+        "L": {"color": C_LOW,    "label": "Low (L)"},
         "?": {"color": "#B0BEC5","label": "Unknown"},
     }
  
@@ -306,14 +325,14 @@ def chart_cases_by_branch(fdf):
             x=sub["Cases"],
             orientation="h",
             marker_color=cfg["color"],
+            marker_line_width=0,
             text=sub["Cases"].where(sub["Cases"] > 0, "").astype(str).str.replace("^0$","",regex=True),
             textposition="inside",
             insidetextanchor="middle",
-            textfont=dict(size=11, color="white"),
+            textfont=dict(size=11, color="white", family="DM Sans"),
             hovertemplate="<b>%{y}</b><br>" + cfg["label"] + ": %{x} cases<extra></extra>",
         ))
  
-    # Total labels on the right end of each bar
     totals = [int(total_per_branch.get(b, 0)) for b in branch_order]
     fig.add_trace(go.Scatter(
         x=totals,
@@ -321,7 +340,7 @@ def chart_cases_by_branch(fdf):
         mode="text",
         text=[f"  <b>{t}</b>" for t in totals],
         textposition="middle right",
-        textfont=dict(size=12, color=G_DARK),
+        textfont=dict(size=12, color=G_DARK, family="DM Sans"),
         showlegend=False,
         hoverinfo="skip",
     ))
@@ -329,31 +348,30 @@ def chart_cases_by_branch(fdf):
     fig.update_layout(
         barmode="stack",
         height=bar_height,
-        margin=dict(t=10, b=10, l=10, r=60),
+        margin=dict(t=10, b=10, l=10, r=70),
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
         xaxis=dict(
-            showgrid=True, gridcolor="#E6EEE9",
+            showgrid=True, gridcolor="#EAF0EC",
             zeroline=False,
-            title=dict(text="Cases Collected", font=dict(size=12)),
-            tickfont=dict(size=11),
+            title=dict(text="Cases Collected", font=dict(size=12, family="DM Sans")),
+            tickfont=dict(size=11, family="DM Sans"),
         ),
         yaxis=dict(
             showgrid=False,
-            tickfont=dict(size=12),
+            tickfont=dict(size=12, family="DM Sans"),
             automargin=True,
         ),
         legend=dict(
             orientation="h", yanchor="bottom", y=1.01,
             xanchor="left", x=0,
-            font=dict(size=12),
+            font=dict(size=12, family="DM Sans"),
             bgcolor="rgba(0,0,0,0)",
         ),
         bargap=0.22,
-        hoverlabel=dict(bgcolor="white", font_size=13),
+        hoverlabel=dict(bgcolor="white", font_size=13, font_family="DM Sans"),
     )
  
-    # Wrap in a scrollable div so the chart is always visible even with 50+ branches
     scroll_height = min(bar_height, 520)
     st.markdown(
         f'<div style="overflow-y:auto; max-height:{scroll_height}px; '
@@ -364,7 +382,105 @@ def chart_cases_by_branch(fdf):
     st.markdown("</div>", unsafe_allow_html=True)
  
  
+# ══════════════════════════════════════════════════════════════════════════════
+# CHART 2 — NEW: Total Cases per Branch (simple vertical bar, ranked)
+# ══════════════════════════════════════════════════════════════════════════════
+def chart_total_cases_bar(fdf):
+    """Clean vertical bar chart: one bar per branch, sorted descending by total cases."""
+    if "Source_Channel" not in fdf.columns:
+        st.info("Source_Channel column not found.")
+        return
  
+    branch_totals = (
+        fdf.groupby("Source_Channel")
+        .size()
+        .reset_index(name="Cases")
+        .sort_values("Cases", ascending=False)
+    )
+ 
+    if branch_totals.empty:
+        st.info("No branch data available.")
+        return
+ 
+    # Colour gradient: top branch gets darkest green, last gets lightest
+    n = len(branch_totals)
+    colours = [
+        f"rgba(27, 107, 58, {max(0.35, 1 - i * 0.6 / max(n-1,1)):.2f})"
+        for i in range(n)
+    ]
+ 
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        x=branch_totals["Source_Channel"],
+        y=branch_totals["Cases"],
+        marker_color=colours,
+        marker_line_width=0,
+        text=branch_totals["Cases"],
+        textposition="outside",
+        textfont=dict(size=12, color=G_DARK, family="DM Sans", weight=700),
+        hovertemplate="<b>%{x}</b><br>Total Cases: %{y}<extra></extra>",
+        name="Total Cases",
+    ))
+ 
+    fig.update_layout(
+        height=380,
+        margin=dict(t=20, b=10, l=10, r=10),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        xaxis=dict(
+            showgrid=False,
+            tickfont=dict(size=11, family="DM Sans"),
+            tickangle=-30,
+            automargin=True,
+        ),
+        yaxis=dict(
+            showgrid=True, gridcolor="#EAF0EC",
+            zeroline=False,
+            title=dict(text="Number of Cases", font=dict(size=12, family="DM Sans")),
+            tickfont=dict(size=11, family="DM Sans"),
+        ),
+        showlegend=False,
+        bargap=0.35,
+        hoverlabel=dict(bgcolor="white", font_size=13, font_family="DM Sans"),
+    )
+ 
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
+ 
+ 
+# ══════════════════════════════════════════════════════════════════════════════
+# CHART 3 — NEW: Potential Level Donut
+# ══════════════════════════════════════════════════════════════════════════════
+def chart_potential_donut(fdf):
+    if "Potential_Level" not in fdf.columns:
+        return
+    counts = fdf["Potential_Level"].str.upper().value_counts().reset_index()
+    counts.columns = ["Level", "Count"]
+    label_map = {"H": "High", "M": "Medium", "L": "Low"}
+    counts["Label"] = counts["Level"].map(label_map).fillna("Unknown")
+    color_map = {"High": C_HIGH, "Medium": C_MED, "Low": C_LOW, "Unknown": "#B0BEC5"}
+ 
+    fig = go.Figure(go.Pie(
+        labels=counts["Label"],
+        values=counts["Count"],
+        hole=0.60,
+        marker_colors=[color_map.get(l, "#ccc") for l in counts["Label"]],
+        textinfo="percent+label",
+        textfont=dict(size=12, family="DM Sans"),
+        hovertemplate="<b>%{label}</b><br>Cases: %{value}<br>Share: %{percent}<extra></extra>",
+    ))
+    total = counts["Count"].sum()
+    fig.update_layout(
+        height=260,
+        margin=dict(t=10, b=10, l=10, r=10),
+        paper_bgcolor="rgba(0,0,0,0)",
+        showlegend=False,
+        annotations=[dict(
+            text=f"<b>{total}</b><br><span style='font-size:11px'>Cases</span>",
+            x=0.5, y=0.5, font=dict(size=18, color=G_DARK, family="DM Sans"),
+            showarrow=False,
+        )],
+    )
+    st.plotly_chart(fig, use_container_width=True, config={"displayModeBar": False})
  
  
 # ══════════════════════════════════════════════════════════════════════════════
@@ -383,7 +499,7 @@ def main():
         st.markdown("**Secrets keys:**")
         st.write(list(st.secrets.keys()))
         st.markdown("**Sheet ID:**")
-        st.code(SHEET_ID)
+        st.code(SHEET_ID if SHEET_ID else "not set")
         st.markdown("**Worksheet:**")
         st.code(WORKSHEET_NAME)
         if "service_account" in st.secrets:
@@ -395,18 +511,18 @@ def main():
     st.markdown(
         "<div class='banner'>"
         "<h1>📊 Sales Performance Dashboard</h1>"
-        "<p>CMCB Bank &nbsp;·&nbsp; Customer Portfolio &amp; Market Visit Report"
-        " &nbsp;·&nbsp; " + today_label + "</p>"
+        "<p>CMCB Bank &nbsp;·&nbsp; Customer Portfolio &amp; Market Visit Report</p>"
+        f"<div class='badge'>📅 {today_label}</div>"
         "</div>",
         unsafe_allow_html=True,
     )
  
     # ── Load data ─────────────────────────────────────────────────────────────
-    with st.spinner("Loading data…"):
-        raw_df = get_telegram_data()
+    with st.spinner("Loading data from Google Sheets…"):
+        raw_df = get_sheet_data()
  
     if raw_df.empty:
-        st.info("💡 No data found. Check Google Sheets connection.")
+        st.info("💡 No data found. Check Google Sheets connection and secrets configuration.")
         return
  
     display_df = prepare_df(raw_df)
@@ -471,20 +587,54 @@ def main():
     )
  
     # ══════════════════════════════════════════════════════════════════════════
-    # SECTION 1 — Cases by Branch (scrollable stacked bar)
+    # SECTION 1 — NEW: Total Cases per Branch (ranked vertical bar)
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown("<div class='section'>", unsafe_allow_html=True)
     st.markdown(
-        "<div class='section-title'>📍 Cases Collected by Branch"
+        "<div class='section-title'>🏆 Total Cases per Branch"
         "<span style='font-size:0.78rem;font-weight:400;color:#6B8C7A;margin-left:8px;'>"
-        "Sorted by total · coloured by Potential Level · scroll if needed</span></div>",
+        "Ranked by total cases collected · darker = more cases</span></div>",
         unsafe_allow_html=True,
     )
-    chart_cases_by_branch(fdf)
+    chart_total_cases_bar(fdf)
     st.markdown("</div>", unsafe_allow_html=True)
  
     # ══════════════════════════════════════════════════════════════════════════
-    # SECTION 2 — Customer Table (original, preserved)
+    # SECTION 2 — Cases by Branch + Potential breakdown (stacked) + Donut
+    # ══════════════════════════════════════════════════════════════════════════
+    col_chart, col_donut = st.columns([3, 1])
+ 
+    with col_chart:
+        st.markdown("<div class='section'>", unsafe_allow_html=True)
+        st.markdown(
+            "<div class='section-title'>📍 Cases by Branch &amp; Potential Level"
+            "<span style='font-size:0.78rem;font-weight:400;color:#6B8C7A;margin-left:8px;'>"
+            "Sorted by total · scroll if needed</span></div>",
+            unsafe_allow_html=True,
+        )
+        chart_cases_by_branch(fdf)
+        st.markdown("</div>", unsafe_allow_html=True)
+ 
+    with col_donut:
+        st.markdown("<div class='section'>", unsafe_allow_html=True)
+        st.markdown(
+            "<div class='section-title'>🎯 Potential Mix</div>",
+            unsafe_allow_html=True,
+        )
+        chart_potential_donut(fdf)
+        # Mini legend
+        st.markdown(
+            "<div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;'>"
+            f"<span style='font-size:0.78rem;color:{C_HIGH};font-weight:700;'>● High</span>"
+            f"<span style='font-size:0.78rem;color:{C_MED};font-weight:700;'>● Medium</span>"
+            f"<span style='font-size:0.78rem;color:{C_LOW};font-weight:700;'>● Low</span>"
+            "</div>",
+            unsafe_allow_html=True,
+        )
+        st.markdown("</div>", unsafe_allow_html=True)
+ 
+    # ══════════════════════════════════════════════════════════════════════════
+    # SECTION 3 — Customer Table (original, preserved)
     # ══════════════════════════════════════════════════════════════════════════
     st.markdown(
         f"<div class='section'><div class='section-title'>👥 Customer Portfolio"
@@ -546,7 +696,7 @@ def main():
  
     # ── Footer ────────────────────────────────────────────────────────────────
     st.markdown(
-        "<div style='text-align:center;color:#9AB0A2;font-size:.78rem;margin-top:28px;'>"
+        "<div style='text-align:center;color:#9AB0A2;font-size:.78rem;margin-top:28px;padding-bottom:20px;'>"
         "Sales Performance Dashboard &nbsp;·&nbsp; CMCB Bank &nbsp;·&nbsp; " + today_label +
         "</div>",
         unsafe_allow_html=True,
