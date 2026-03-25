@@ -39,7 +39,7 @@ api_id = 20056320
 api_hash = "4b1394e0f07625a3c25ea32fa3030218"
 session_name = "customer_session_2"
 
-# === Custom CSS for beautiful styling ===
+# === Custom CSS ===
 st.markdown(
     """
     <style>
@@ -60,14 +60,6 @@ st.markdown(
             margin-bottom: 25px;
             border-left: 6px solid #16A34A;
         }
-        .metric-card {
-            background: linear-gradient(135deg, #F0FDF4 0%, #DCFCE7 100%);
-            padding: 20px;
-            border-radius: 12px;
-            text-align: center;
-            margin: 10px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
         .stButton > button {
             background: linear-gradient(135deg, #166534 0%, #16A34A 100%);
             color: white;
@@ -80,29 +72,6 @@ st.markdown(
         .stButton > button:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
-        }
-        .highlight {
-            background-color: #F0FDF4;
-            padding: 15px;
-            border-radius: 8px;
-            border-left: 4px solid #22C55E;
-            margin: 10px 0;
-        }
-        .tab-content {
-            padding: 20px;
-            background: white;
-            border-radius: 0 0 15px 15px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-        }
-        .header-style {
-            background: linear-gradient(90deg, #14532D 0%, #16A34A 100%);
-            padding: 15px;
-            border-radius: 10px;
-            color: white;
-            text-align: center;
-            margin: 15px 0;
-            font-size: 1.3em;
-            font-weight: bold;
         }
     </style>
     """,
@@ -156,63 +125,25 @@ def format_interest(value):
     return ""
 
 
-# Create three columns for the header
-header_col1, header_col2, header_col3 = st.columns([1, 3, 1])
+def shorten_branch_name(branch_name):
+    """
+    Examples:
+    - Sales Photo Report NRM -> NRM
+    - Sales Photo Report 271M -> 271M
+    - Sales Photo Report 598M -> 598M
+    """
+    if pd.isna(branch_name):
+        return "Unknown"
 
-with header_col1:
-    try:
-        logo_path = os.path.join(BASE_DIR, "Logo-CMCB_FA-15.png")
-        if os.path.exists(logo_path):
-            logo_base64 = get_base64_encoded_image(logo_path)
-            st.markdown(
-                f"""
-                <div style="background: white; padding: 10px; border-radius: 12px;
-                            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-                            display: flex; align-items: center; justify-content: center;">
-                    <img src="data:image/png;base64,{logo_base64}"
-                         width="100" style="border-radius: 8px;">
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-        else:
-            st.markdown(
-                """
-                <div style="background: #f0f0f0; padding: 20px; border-radius: 12px;
-                            text-align: center; color: #666;">
-                    <p style="margin: 0;">🏦<br>Logo</p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-    except Exception:
-        st.markdown(
-            """
-            <div style="background: #f0f0f0; padding: 20px; border-radius: 12px;
-                        text-align: center; color: #666;">
-                <p style="margin: 0;">🏦<br>Logo</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
+    name = str(branch_name).strip()
 
-with header_col2:
-    st.markdown(
-        """
-        <div style="text-align: center; padding: 15px;">
-            <h1 style="color: #14532D; margin: 0; font-size: 2.2rem; font-weight: 800;">
-                Planning, Execution and Customer Data Management
-            </h1>
-            <p style="color: #16A34A; margin: 5px 0 0 0; font-size: 1.1rem; font-weight: 600;">
-                Performance & Execution Management System
-            </p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
+    if len(name) >= 4 and name[-4:] in ["271M", "598M"]:
+        return name[-4:]
 
-with header_col3:
-    st.markdown("")
+    if len(name) >= 3:
+        return name[-3:]
+
+    return name
 
 
 @st.cache_resource
@@ -287,11 +218,9 @@ def load_sheet_data(_gc, sheet_id, worksheet_name):
 
         try:
             data = sheet.get_all_records()
-
             if not data:
                 st.info(f"📭 No data found in worksheet '{worksheet_name}'")
                 return pd.DataFrame()
-
             return pd.DataFrame(data)
 
         except Exception as e:
@@ -344,15 +273,25 @@ def prepare_sales_df(raw_df):
 def style_sales_dataframe(df):
     styler = df.style.hide(axis="index")
 
+    def highlight_row(row):
+        potential = str(row.get("Potential", "")).strip().upper()
+        if potential == "H":
+            return ["background-color: #FFF8DB"] * len(row)
+        elif potential == "M":
+            return ["background-color: #F7FCF5"] * len(row)
+        return [""] * len(row)
+
     def color_potential(val):
         val = str(val).strip().upper()
         if val == "H":
-            return "color: #DC2626; font-weight: bold; font-size: 14px;"
+            return "color: #B45309; font-weight: bold; font-size: 14px;"
         elif val == "M":
             return "color: #D97706; font-weight: bold; font-size: 14px;"
         elif val == "L":
             return "color: #15803D; font-weight: bold; font-size: 14px;"
         return "color: #6B7280; font-size: 14px;"
+
+    styler = styler.apply(highlight_row, axis=1)
 
     if "Potential" in df.columns:
         styler = styler.map(color_potential, subset=["Potential"])
@@ -406,6 +345,65 @@ def style_sales_dataframe(df):
         ]
     )
     return styler
+
+
+# Header
+header_col1, header_col2, header_col3 = st.columns([1, 3, 1])
+
+with header_col1:
+    try:
+        logo_path = os.path.join(BASE_DIR, "Logo-CMCB_FA-15.png")
+        if os.path.exists(logo_path):
+            logo_base64 = get_base64_encoded_image(logo_path)
+            st.markdown(
+                f"""
+                <div style="background: white; padding: 10px; border-radius: 12px;
+                            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                            display: flex; align-items: center; justify-content: center;">
+                    <img src="data:image/png;base64,{logo_base64}"
+                         width="100" style="border-radius: 8px;">
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+        else:
+            st.markdown(
+                """
+                <div style="background: #f0f0f0; padding: 20px; border-radius: 12px;
+                            text-align: center; color: #666;">
+                    <p style="margin: 0;">🏦<br>Logo</p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+    except Exception:
+        st.markdown(
+            """
+            <div style="background: #f0f0f0; padding: 20px; border-radius: 12px;
+                        text-align: center; color: #666;">
+                <p style="margin: 0;">🏦<br>Logo</p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+
+with header_col2:
+    st.markdown(
+        """
+        <div style="text-align: center; padding: 15px;">
+            <h1 style="color: #14532D; margin: 0; font-size: 2.2rem; font-weight: 800;">
+                Planning, Execution and Customer Data Management
+            </h1>
+            <p style="color: #16A34A; margin: 5px 0 0 0; font-size: 1.1rem; font-weight: 600;">
+                Performance & Execution Management System
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+with header_col3:
+    st.markdown("")
 
 
 def main():
@@ -559,20 +557,25 @@ def main():
             with m4:
                 st.metric("Low Potential", low_potential)
 
-            # === Branch Summary Chart ===
+            # Branch Summary
             st.markdown("### 📍 Branch Summary")
 
             if "Source_Channel" in filtered_df.columns and not filtered_df.empty:
-                branch_summary = (
-                    filtered_df["Source_Channel"]
+                branch_summary_raw = filtered_df.copy()
+                branch_summary_raw["Branch"] = (
+                    branch_summary_raw["Source_Channel"]
                     .fillna("Unknown")
                     .astype(str)
                     .str.strip()
-                    .value_counts()
-                    .reset_index()
+                    .apply(shorten_branch_name)
                 )
-                branch_summary.columns = ["Branch", "Total_Customers"]
-                branch_summary = branch_summary.sort_values("Total_Customers", ascending=False)
+
+                branch_summary = (
+                    branch_summary_raw.groupby("Branch", as_index=False)
+                    .size()
+                    .rename(columns={"size": "Total_Customers"})
+                    .sort_values("Total_Customers", ascending=False)
+                )
 
                 fig_branch = px.bar(
                     branch_summary,
@@ -617,7 +620,7 @@ def main():
                 )
 
                 fig_branch.update_xaxes(
-                    tickangle=-30,
+                    tickangle=0,
                     showgrid=False,
                     categoryorder="total descending",
                 )
@@ -673,7 +676,10 @@ def main():
                 info_columns = [c for c in ["Amount", "Bank", "Interest", "Loan_Type", "Tenure", "Maturity"] if c in customer_display_df.columns]
                 if info_columns:
                     customer_display_df["Info_Score"] = customer_display_df[info_columns].apply(
-                        lambda row: sum(bool(str(x).strip()) and str(x).strip().lower() != "nan" for x in row),
+                        lambda row: sum(
+                            bool(str(x).strip()) and str(x).strip().lower() != "nan"
+                            for x in row
+                        ),
                         axis=1,
                     )
                 else:
@@ -777,25 +783,7 @@ def main():
         "</div>",
         unsafe_allow_html=True,
     )
-def shorten_branch_name(branch_name):
-    """
-    Convert:
-    - 'Sales Photo Report NRM' -> 'NRM'
-    - 'Sales Photo Report 271M' -> '271M'
-    - 'Sales Photo Report 598M' -> '598M'
-    """
-    if pd.isna(branch_name):
-        return "Unknown"
 
-    name = str(branch_name).strip()
-
-    if len(name) >= 4 and name[-4:] in ["271M", "598M"]:
-        return name[-4:]
-
-    if len(name) >= 3:
-        return name[-3:]
-
-    return name
 
 if __name__ == "__main__":
     main()
