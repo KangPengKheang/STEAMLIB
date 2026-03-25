@@ -777,7 +777,25 @@ def main():
         "</div>",
         unsafe_allow_html=True,
     )
+def shorten_branch_name(branch_name):
+    """
+    Convert:
+    - 'Sales Photo Report NRM' -> 'NRM'
+    - 'Sales Photo Report 271M' -> '271M'
+    - 'Sales Photo Report 598M' -> '598M'
+    """
+    if pd.isna(branch_name):
+        return "Unknown"
 
+    name = str(branch_name).strip()
+
+    if len(name) >= 4 and name[-4:] in ["271M", "598M"]:
+        return name[-4:]
+
+    if len(name) >= 3:
+        return name[-3:]
+
+    return name
 
 if __name__ == "__main__":
     main()
