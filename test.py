@@ -38,6 +38,7 @@ import gspread
 from datetime import datetime, timedelta
 import hashlib
 import time
+import os
 
 # from oauth2client.service_account import ServiceAccountCredentials
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
