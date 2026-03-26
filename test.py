@@ -52,6 +52,7 @@ st.markdown(
             margin-bottom: 25px;
             box-shadow: 0 6px 18px rgba(0, 0, 0, 0.10);
         }
+
         .function-card {
             background: white;
             padding: 25px;
@@ -60,6 +61,7 @@ st.markdown(
             margin-bottom: 25px;
             border-left: 6px solid #16A34A;
         }
+
         .stButton > button {
             background: linear-gradient(135deg, #166534 0%, #16A34A 100%);
             color: white;
@@ -69,9 +71,14 @@ st.markdown(
             font-weight: 600;
             transition: all 0.3s ease;
         }
+
         .stButton > button:hover {
             transform: translateY(-2px);
             box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+        }
+
+        .block-container {
+            padding-top: 1.2rem;
         }
     </style>
     """,
@@ -347,7 +354,9 @@ def style_sales_dataframe(df):
     return styler
 
 
-# Header
+# =========================
+# HEADER
+# =========================
 header_col1, header_col2, header_col3 = st.columns([1, 3, 1])
 
 with header_col1:
@@ -452,116 +461,40 @@ def main():
                 "Remark",
             ]
 
-            available_columns = [col for col in required_columns if col in telegram_df.columns]
+            available_columns = [
+                col for col in required_columns if col in telegram_df.columns
+            ]
             display_df = telegram_df[available_columns].copy()
             display_df = prepare_sales_df(display_df)
 
             st.markdown("### 📊 Customer Portfolio Overview")
-            st.markdown("### 🔍 Filter Portfolio")
 
-            col1, col2, col3 = st.columns(3)
+            today = datetime.now(pytz.timezone("Asia/Phnom_Penh")).date()
 
-            if "Source_Channel" in display_df.columns:
-                all_branches = sorted(
-                    display_df["Source_Channel"].dropna().astype(str).str.strip().unique().tolist()
-                )
+            if (
+                "Message_Date" in display_df.columns
+                and not display_df["Message_Date"].dropna().empty
+            ):
+                min_date = display_df["Message_Date"].dropna().min().date()
+                max_date = display_df["Message_Date"].dropna().max().date()
             else:
-                all_branches = []
+                min_date = today
+                max_date = today
 
-            with col1:
-                selected_potential = st.selectbox(
-                    "Customer Potential:",
-                    ["All", "H", "M", "L"]
-                )
+            # =========================
+            # BIG PICTURE CHART FIRST
+            # =========================
+            overview_df = display_df.copy()
 
-            with col2:
-                selected_branch = st.selectbox(
-                    "📊 Presentation Branch",
-                    ["All"] + all_branches
-                )
+            default_overview_date = today if today <= max_date else max_date
 
-            with col3:
-                today = datetime.now(pytz.timezone("Asia/Phnom_Penh")).date()
-                date_filter_type = st.radio(
-                    "Date Filter:",
-                    ["Today", "Date Range"],
-                    horizontal=True
-                )
-
-                if "Message_Date" in display_df.columns and not display_df["Message_Date"].dropna().empty:
-                    min_date = display_df["Message_Date"].dropna().min().date()
-                    max_date = display_df["Message_Date"].dropna().max().date()
-                else:
-                    min_date = today
-                    max_date = today
-
-                if date_filter_type == "Today":
-                    start_date = end_date = today
-                else:
-                    start_date = st.date_input(
-                        "From:",
-                        min_date,
-                        min_value=min_date,
-                        max_value=max_date
-                    )
-                    end_date = st.date_input(
-                        "To:",
-                        max_date,
-                        min_value=min_date,
-                        max_value=max_date
-                    )
-
-            filtered_df = display_df.copy()
-
-            if selected_potential != "All" and "Potential_Level" in filtered_df.columns:
-                filtered_df = filtered_df[
-                    filtered_df["Potential_Level"].astype(str).str.strip().str.upper() == selected_potential
+            if "Message_Date" in overview_df.columns:
+                overview_df = overview_df[
+                    overview_df["Message_Date"].dt.date == default_overview_date
                 ]
 
-            if selected_branch != "All" and "Source_Channel" in filtered_df.columns:
-                filtered_df = filtered_df[
-                    filtered_df["Source_Channel"].astype(str).str.strip() == selected_branch
-                ]
-
-            if "Message_Date" in filtered_df.columns:
-                filtered_df = filtered_df[
-                    (filtered_df["Message_Date"].dt.date >= start_date)
-                    & (filtered_df["Message_Date"].dt.date <= end_date)
-                ]
-
-            total_customers = len(filtered_df)
-            high_potential = (
-                len(filtered_df[filtered_df["Potential_Level"].astype(str).str.strip().str.upper() == "H"])
-                if "Potential_Level" in filtered_df.columns else 0
-            )
-            medium_potential = (
-                len(filtered_df[filtered_df["Potential_Level"].astype(str).str.strip().str.upper() == "M"])
-                if "Potential_Level" in filtered_df.columns else 0
-            )
-            low_potential = (
-                len(filtered_df[filtered_df["Potential_Level"].astype(str).str.strip().str.upper() == "L"])
-                if "Potential_Level" in filtered_df.columns else 0
-            )
-
-            m1, m2, m3, m4 = st.columns(4)
-            with m1:
-                st.metric("Total Customers", total_customers)
-            with m2:
-                st.metric(
-                    "High Potential",
-                    high_potential,
-                    delta=f"{(high_potential / total_customers * 100):.1f}%" if total_customers else "0%"
-                )
-            with m3:
-                st.metric("Medium Potential", medium_potential)
-            with m4:
-                st.metric("Low Potential", low_potential)
-
-            # Branch Summary
-            st.markdown("### 📍 Branch Summary")
-
-            if "Source_Channel" in filtered_df.columns and not filtered_df.empty:
-                branch_summary_raw = filtered_df.copy()
+            if "Source_Channel" in overview_df.columns and not overview_df.empty:
+                branch_summary_raw = overview_df.copy()
                 branch_summary_raw["Branch"] = (
                     branch_summary_raw["Source_Channel"]
                     .fillna("Unknown")
@@ -590,7 +523,7 @@ def main():
                         [0.75, "#22C55E"],
                         [1.0, "#166534"],
                     ],
-                    title="Customer Count by Branch",
+                    title=f"Customer Count by Branch ({default_overview_date})",
                 )
 
                 fig_branch.update_traces(
@@ -602,13 +535,13 @@ def main():
                 )
 
                 fig_branch.update_layout(
-                    height=520,
+                    height=430,
                     showlegend=False,
                     plot_bgcolor="rgba(0,0,0,0)",
                     paper_bgcolor="rgba(0,0,0,0)",
                     coloraxis_showscale=False,
                     title={
-                        "text": "Customer Count by Branch",
+                        "text": f"Customer Count by Branch ({default_overview_date})",
                         "x": 0.5,
                         "xanchor": "center",
                         "font": {"size": 22, "color": "#14532D"},
@@ -616,7 +549,7 @@ def main():
                     xaxis_title="Branch",
                     yaxis_title="Number of Customers",
                     font={"size": 14, "color": "#1F2937"},
-                    margin=dict(t=70, b=110, l=40, r=30),
+                    margin=dict(t=70, b=70, l=40, r=30),
                 )
 
                 fig_branch.update_xaxes(
@@ -635,9 +568,152 @@ def main():
 
                 with st.expander("📋 Branch Summary Table"):
                     st.table(branch_summary)
-
             else:
-                st.info("No branch summary available for the selected filters.")
+                st.info("No branch summary available for overview chart.")
+
+            # =========================
+            # FILTERS BELOW CHART
+            # =========================
+            st.markdown("### 🔍 Drill-Down Filters")
+
+            if "Source_Channel" in display_df.columns:
+                all_branches = sorted(
+                    display_df["Source_Channel"]
+                    .dropna()
+                    .astype(str)
+                    .str.strip()
+                    .unique()
+                    .tolist()
+                )
+            else:
+                all_branches = []
+
+            filter_col1, filter_col2, filter_col3 = st.columns(3)
+
+            with filter_col1:
+                selected_branch = st.selectbox(
+                    "📍 Presentation Branch",
+                    ["All"] + all_branches,
+                    index=0,
+                )
+
+            with filter_col2:
+                selected_potential = st.selectbox(
+                    "👤 Customer Potential",
+                    ["All", "H", "M", "L"],
+                    index=0,
+                )
+
+            with filter_col3:
+                date_filter_type = st.radio(
+                    "📅 Date Filter",
+                    ["Today", "Date Range"],
+                    horizontal=True,
+                )
+
+                if date_filter_type == "Today":
+                    start_date = today
+                    end_date = today
+                else:
+                    start_date = st.date_input(
+                        "From:",
+                        min_date,
+                        min_value=min_date,
+                        max_value=max_date,
+                        key="start_date_filter",
+                    )
+                    end_date = st.date_input(
+                        "To:",
+                        max_date,
+                        min_value=min_date,
+                        max_value=max_date,
+                        key="end_date_filter",
+                    )
+
+            # =========================
+            # DETAIL FILTERED DATA
+            # =========================
+            filtered_df = display_df.copy()
+
+            if selected_potential != "All" and "Potential_Level" in filtered_df.columns:
+                filtered_df = filtered_df[
+                    filtered_df["Potential_Level"].astype(str).str.strip().str.upper()
+                    == selected_potential
+                ]
+
+            if selected_branch != "All" and "Source_Channel" in filtered_df.columns:
+                filtered_df = filtered_df[
+                    filtered_df["Source_Channel"].astype(str).str.strip()
+                    == selected_branch
+                ]
+
+            if "Message_Date" in filtered_df.columns:
+                filtered_df = filtered_df[
+                    (filtered_df["Message_Date"].dt.date >= start_date)
+                    & (filtered_df["Message_Date"].dt.date <= end_date)
+                ]
+
+            # =========================
+            # KPI
+            # =========================
+            total_customers = len(filtered_df)
+            high_potential = (
+                len(
+                    filtered_df[
+                        filtered_df["Potential_Level"]
+                        .astype(str)
+                        .str.strip()
+                        .str.upper()
+                        == "H"
+                    ]
+                )
+                if "Potential_Level" in filtered_df.columns
+                else 0
+            )
+            medium_potential = (
+                len(
+                    filtered_df[
+                        filtered_df["Potential_Level"]
+                        .astype(str)
+                        .str.strip()
+                        .str.upper()
+                        == "M"
+                    ]
+                )
+                if "Potential_Level" in filtered_df.columns
+                else 0
+            )
+            low_potential = (
+                len(
+                    filtered_df[
+                        filtered_df["Potential_Level"]
+                        .astype(str)
+                        .str.strip()
+                        .str.upper()
+                        == "L"
+                    ]
+                )
+                if "Potential_Level" in filtered_df.columns
+                else 0
+            )
+
+            st.markdown("### 📈 Filtered Summary")
+
+            m1, m2, m3, m4 = st.columns(4)
+            with m1:
+                st.metric("Total Customers", total_customers)
+            with m2:
+                st.metric(
+                    "High Potential",
+                    high_potential,
+                    delta=f"{(high_potential / total_customers * 100):.1f}%"
+                    if total_customers
+                    else "0%",
+                )
+            with m3:
+                st.metric("Medium Potential", medium_potential)
+            with m4:
+                st.metric("Low Potential", low_potential)
 
             st.markdown(f"### 👥 Showing {len(filtered_df)} Customers")
 
@@ -656,7 +732,9 @@ def main():
                     "Potential_Product",
                     "Remark",
                 ]
-                visible_columns = [c for c in visible_columns if c in filtered_df.columns]
+                visible_columns = [
+                    c for c in visible_columns if c in filtered_df.columns
+                ]
 
                 customer_display_df = filtered_df[visible_columns].copy()
 
@@ -673,9 +751,23 @@ def main():
                 else:
                     customer_display_df["Potential_Level_Order"] = 4
 
-                info_columns = [c for c in ["Amount", "Bank", "Interest", "Loan_Type", "Tenure", "Maturity"] if c in customer_display_df.columns]
+                info_columns = [
+                    c
+                    for c in [
+                        "Amount",
+                        "Bank",
+                        "Interest",
+                        "Loan_Type",
+                        "Tenure",
+                        "Maturity",
+                    ]
+                    if c in customer_display_df.columns
+                ]
+
                 if info_columns:
-                    customer_display_df["Info_Score"] = customer_display_df[info_columns].apply(
+                    customer_display_df["Info_Score"] = customer_display_df[
+                        info_columns
+                    ].apply(
                         lambda row: sum(
                             bool(str(x).strip()) and str(x).strip().lower() != "nan"
                             for x in row
@@ -738,25 +830,37 @@ def main():
                 q1, q2, q3 = st.columns(3)
 
                 with q1:
-                    st.info(f"**High Potential:** {high_potential} customers need immediate follow-up")
+                    st.info(
+                        f"**High Potential:** {high_potential} customers need immediate follow-up"
+                    )
 
                 with q2:
-                    if "Business" in filtered_df.columns and not filtered_df["Business"].dropna().empty:
+                    if (
+                        "Business" in filtered_df.columns
+                        and not filtered_df["Business"].dropna().empty
+                    ):
                         top_business = filtered_df["Business"].mode()
                         if len(top_business) > 0:
                             st.info(f"**Top Business:** {top_business.iloc[0]}")
 
                 with q3:
-                    if "Loan_Type" in filtered_df.columns and not filtered_df["Loan_Type"].dropna().empty:
+                    if (
+                        "Loan_Type" in filtered_df.columns
+                        and not filtered_df["Loan_Type"].dropna().empty
+                    ):
                         popular_loan = filtered_df["Loan_Type"].mode()
                         if len(popular_loan) > 0:
                             st.info(f"**Popular Product:** {popular_loan.iloc[0]}")
 
             else:
-                st.warning("No customers match the selected filters. Try adjusting your criteria.")
+                st.warning(
+                    "No customers match the selected filters. Try adjusting your criteria."
+                )
 
         else:
-            st.info("💡 No customer data available. Please ensure data is pushed to Google Sheets first.")
+            st.info(
+                "💡 No customer data available. Please ensure data is pushed to Google Sheets first."
+            )
 
             with st.expander("🆕 How to get started"):
                 st.markdown(
