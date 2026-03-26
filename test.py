@@ -332,7 +332,7 @@ def style_sales_dataframe(df):
             {
                 "selector": "th",
                 "props": [
-                    ("background", "linear-gradient(90deg, #14532D 0%, #16A34A 100%)"),
+                    ("background", "linear-gradient(90deg, #008A4A 0%, #008A4A 100%)"),
                     ("color", "white"),
                     ("font-weight", "bold"),
                     ("text-align", "center"),
