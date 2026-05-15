@@ -179,13 +179,24 @@ def is_filled_value(value):
     if pd.isna(value):
         return False
     value_str = str(value).strip()
-    return value_str != "" and value_str.lower() not in {
+    invalid_tokens = {
+        "",
         "nan",
         "none",
         "null",
         "nat",
         "<na>",
+        "n/a",
+        "na",
+        "n.a",
+        "n\\a",
+        "not available",
+        "nil",
+        "-",
+        "--",
+        "__",
     }
+    return value_str.lower() not in invalid_tokens
 
 
 def build_branch_sales_kpi(df):
@@ -199,7 +210,6 @@ def build_branch_sales_kpi(df):
         "Loan_Type",
         "Tenure",
         "Maturity",
-        "Potential_Level",
     ]
 
     if df.empty or "Source_Channel" not in df.columns:
@@ -238,8 +248,9 @@ def build_branch_sales_kpi(df):
         .sort_values(["Fill_Rate", "Total_Customers"], ascending=[False, False])
     )
 
+    # Floor score so it never rounds up; less information always stays lower.
     branch_kpi["KPI_Score"] = (
-        branch_kpi["Fill_Rate"].round().clip(lower=1, upper=100).astype(int)
+        np.floor(branch_kpi["Fill_Rate"]).clip(min=1, max=100).astype(int)
     )
     branch_kpi["Fill_Rate"] = branch_kpi["Fill_Rate"].round(1)
     return branch_kpi
@@ -678,17 +689,6 @@ def main():
             )
 
             if not branch_kpi.empty:
-                top_branch_name = branch_kpi.iloc[0]["Branch"]
-                top_branch_score = int(branch_kpi.iloc[0]["KPI_Score"])
-
-                kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
-                with kpi_col1:
-                    st.metric("Ranked Branches", int(len(branch_kpi)))
-                with kpi_col2:
-                    st.metric("Best Branch", f"{top_branch_name} ({top_branch_score}/100)")
-                with kpi_col3:
-                    st.metric("Average KPI Score", f"{branch_kpi['KPI_Score'].mean():.1f}/100")
-
                 kpi_chart_df = branch_kpi.sort_values(
                     ["KPI_Score", "Total_Customers"], ascending=[True, True]
                 )
@@ -725,19 +725,7 @@ def main():
                 fig_kpi.update_xaxes(range=[0, 100], showgrid=True, gridcolor="rgba(22, 101, 52, 0.08)")
                 fig_kpi.update_yaxes(showgrid=False)
                 st.plotly_chart(fig_kpi, use_container_width=True)
-
-                ranking_df = branch_kpi.sort_values(
-                    ["KPI_Score", "Total_Customers"], ascending=[False, False]
-                ).copy()
-                ranking_df.insert(0, "Rank", range(1, len(ranking_df) + 1))
-                ranking_df = ranking_df.rename(
-                    columns={
-                        "KPI_Score": "Score",
-                        "Fill_Rate": "Average Fill Rate (%)",
-                        "Total_Customers": "Total Customers",
-                    }
-                )
-                st.dataframe(ranking_df, use_container_width=True, hide_index=True)
+                st.caption("Quick visual only: branches ranked by information quality score.")
             else:
                 st.info("No branch KPI data available yet.")
 
