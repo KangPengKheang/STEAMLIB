@@ -250,7 +250,7 @@ def build_branch_sales_kpi(df):
 
     # Floor score so it never rounds up; less information always stays lower.
     branch_kpi["KPI_Score"] = (
-        np.floor(branch_kpi["Fill_Rate"]).clip(min=1, max=100).astype(int)
+        np.floor(branch_kpi["Fill_Rate"]).clip(lower=1, upper=100).astype(int)
     )
     branch_kpi["Fill_Rate"] = branch_kpi["Fill_Rate"].round(1)
     return branch_kpi
