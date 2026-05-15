@@ -106,6 +106,25 @@ st.markdown(
         font-size: 1.3em;
         font-weight: bold;
     }
+    .kpi-shell {
+        background: linear-gradient(135deg, #ecfdf3 0%, #f7fff9 55%, #ffffff 100%);
+        border: 1px solid #bbf7d0;
+        border-radius: 16px;
+        padding: 16px 18px;
+        margin: 14px 0 16px 0;
+        box-shadow: 0 10px 24px rgba(22, 101, 52, 0.08);
+    }
+    .kpi-shell h4 {
+        margin: 0;
+        color: #14532d;
+        font-size: 1.1rem;
+        font-weight: 800;
+    }
+    .kpi-shell p {
+        margin: 6px 0 0 0;
+        color: #4b5563;
+        font-size: 0.93rem;
+    }
 </style>
 """,
     unsafe_allow_html=True,
@@ -284,6 +303,51 @@ def load_sheet_data(_gc, sheet_id, worksheet_name):
         return pd.DataFrame()
 
 import re
+
+
+def format_amount(value):
+    if pd.isna(value) or str(value).strip() == "":
+        return ""
+
+    val_str = str(value).strip()
+    if val_str.lower().endswith("k"):
+        return val_str
+
+    try:
+        num = float(val_str.replace("$", "").replace(",", ""))
+        return f"${num:,.2f}"
+    except Exception:
+        return val_str
+
+
+def format_interest(value):
+    if pd.isna(value) or str(value).strip() in ["", "nan", "None", "null"]:
+        return ""
+
+    val_str = str(value).strip()
+    clean_val = val_str.replace("%", "").strip()
+
+    conversion_attempts = [
+        lambda x: float(x),
+        lambda x: float(x.replace(",", "").replace(" ", "")),
+        lambda x: (
+            float(re.search(r"[-+]?\d*\.?\d+", x).group())
+            if re.search(r"[-+]?\d*\.?\d+", x)
+            else None
+        ),
+    ]
+
+    for convert_func in conversion_attempts:
+        try:
+            num = convert_func(clean_val)
+            if num is not None:
+                return f"{num:.1f}%"
+        except (ValueError, AttributeError):
+            continue
+
+    return ""
+
+
 @st.cache_data
 def get_telegram_data():
     gc = connect_to_google_sheets()
@@ -586,8 +650,156 @@ def main():
                     ]
                 )
                 return styler
+
+            def _is_filled_value(value):
+                if pd.isna(value):
+                    return False
+                value_str = str(value).strip()
+                return value_str != "" and value_str.lower() not in {
+                    "nan",
+                    "none",
+                    "null",
+                    "nat",
+                    "<na>",
+                }
+
+            def build_branch_sales_kpi(df):
+                required_info_fields = [
+                    "Name",
+                    "Tel",
+                    "Bank",
+                    "Business",
+                    "Amount",
+                    "Interest",
+                    "Loan_Type",
+                    "Tenure",
+                    "Maturity",
+                    "Potential_Level",
+                ]
+
+                if df.empty or "Source_Channel" not in df.columns:
+                    return pd.DataFrame(
+                        columns=["Branch", "KPI_Score", "Fill_Rate", "Total_Customers"]
+                    )
+
+                score_df = df.copy()
+
+                for field in required_info_fields:
+                    if field not in score_df.columns:
+                        score_df[field] = ""
+
+                score_df["Branch"] = (
+                    score_df["Source_Channel"]
+                    .fillna("Unknown")
+                    .astype(str)
+                    .str.strip()
+                    .replace("", "Unknown")
+                )
+
+                filled_matrix = score_df[required_info_fields].apply(
+                    lambda col: col.map(_is_filled_value)
+                )
+                score_df["Row_Quality_Score"] = (
+                    filled_matrix.sum(axis=1) / len(required_info_fields) * 100
+                )
+
+                branch_kpi = (
+                    score_df.groupby("Branch", as_index=False)
+                    .agg(
+                        Total_Customers=("Branch", "size"),
+                        Fill_Rate=("Row_Quality_Score", "mean"),
+                    )
+                    .sort_values(["Fill_Rate", "Total_Customers"], ascending=[False, False])
+                )
+
+                branch_kpi["KPI_Score"] = (
+                    branch_kpi["Fill_Rate"].round().clip(lower=1, upper=100).astype(int)
+                )
+                branch_kpi["Fill_Rate"] = branch_kpi["Fill_Rate"].round(1)
+                return branch_kpi
+
             # Sales Presentation Header
             st.markdown("### 📊 Customer Portfolio Overview")
+
+            branch_kpi = build_branch_sales_kpi(display_df)
+            st.markdown(
+                """
+                <div class="kpi-shell">
+                    <h4>🏆 Sales Key Performance Indicator</h4>
+                    <p>
+                        Branch score is based on completeness of Name, Tel, Bank, Business,
+                        Amount, Interest, Loan Type, Tenure, Maturity, and Potential.
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True,
+            )
+
+            if not branch_kpi.empty:
+                top_branch_name = branch_kpi.iloc[0]["Branch"]
+                top_branch_score = int(branch_kpi.iloc[0]["KPI_Score"])
+
+                kpi_col1, kpi_col2, kpi_col3 = st.columns(3)
+                with kpi_col1:
+                    st.metric("Ranked Branches", int(len(branch_kpi)))
+                with kpi_col2:
+                    st.metric("Best Branch", f"{top_branch_name} ({top_branch_score}/100)")
+                with kpi_col3:
+                    st.metric("Average KPI Score", f"{branch_kpi['KPI_Score'].mean():.1f}/100")
+
+                kpi_chart_df = branch_kpi.sort_values(
+                    ["KPI_Score", "Total_Customers"], ascending=[True, True]
+                )
+                fig_kpi = px.bar(
+                    kpi_chart_df,
+                    x="KPI_Score",
+                    y="Branch",
+                    orientation="h",
+                    text="KPI_Score",
+                    color="KPI_Score",
+                    color_continuous_scale=[
+                        [0.0, "#fca5a5"],
+                        [0.45, "#facc15"],
+                        [1.0, "#16a34a"],
+                    ],
+                    title="Branch Information Quality Score (Highest to Lowest)",
+                )
+                fig_kpi.update_traces(
+                    texttemplate="%{text}/100",
+                    textposition="outside",
+                    marker_line_color="white",
+                    marker_line_width=1,
+                )
+                fig_kpi.update_layout(
+                    height=max(320, 34 * len(kpi_chart_df) + 130),
+                    showlegend=False,
+                    coloraxis_showscale=False,
+                    plot_bgcolor="rgba(0,0,0,0)",
+                    paper_bgcolor="rgba(0,0,0,0)",
+                    margin=dict(t=70, b=35, l=20, r=15),
+                    xaxis_title="KPI Score (1 - 100)",
+                    yaxis_title="Branch",
+                )
+                fig_kpi.update_xaxes(range=[0, 100], showgrid=True, gridcolor="rgba(22, 101, 52, 0.08)")
+                fig_kpi.update_yaxes(showgrid=False)
+                st.plotly_chart(fig_kpi, use_container_width=True)
+
+                ranking_df = branch_kpi.sort_values(
+                    ["KPI_Score", "Total_Customers"], ascending=[False, False]
+                ).copy()
+                ranking_df.insert(0, "Rank", range(1, len(ranking_df) + 1))
+                ranking_df = ranking_df.rename(
+                    columns={
+                        "Branch": "Branch",
+                        "KPI_Score": "Score",
+                        "Fill_Rate": "Average Fill Rate (%)",
+                        "Total_Customers": "Total Customers",
+                    }
+                )
+                st.dataframe(ranking_df, use_container_width=True, hide_index=True)
+            else:
+                st.info("No branch KPI data available yet.")
+
             # Sales Filters
             st.markdown("### 🔍 Filter Portfolio")
             col1, col2, col3 = st.columns(3)
