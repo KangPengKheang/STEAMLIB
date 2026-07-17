@@ -998,7 +998,35 @@ def main():
                     }
                 )
 
-                styled_df = style_sales_dataframe(customer_display_df)
+                table_col1, table_col2 = st.columns([1, 2])
+                with table_col1:
+                    rows_per_page = st.selectbox(
+                        "Rows per page",
+                        [50, 100, 200, 500],
+                        index=1,
+                    )
+
+                total_pages = max(
+                    1, (len(customer_display_df) + rows_per_page - 1) // rows_per_page
+                )
+                with table_col2:
+                    page_number = st.number_input(
+                        "Page",
+                        min_value=1,
+                        max_value=total_pages,
+                        value=1,
+                        step=1,
+                    )
+
+                page_start = (page_number - 1) * rows_per_page
+                page_end = min(page_start + rows_per_page, len(customer_display_df))
+                st.caption(
+                    f"Displaying rows {page_start + 1:,}–{page_end:,} "
+                    f"of {len(customer_display_df):,} (page {page_number} of {total_pages})"
+                )
+
+                table_page_df = customer_display_df.iloc[page_start:page_end].copy()
+                styled_df = style_sales_dataframe(table_page_df)
                 st.dataframe(
                     styled_df,
                     width="stretch",
