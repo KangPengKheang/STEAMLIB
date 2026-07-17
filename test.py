@@ -213,6 +213,16 @@ def is_filled_value(value):
     return value_str.lower() not in invalid_tokens
 
 
+def normalize_tel_for_count(value):
+    """Normalize telephone values so formatting differences count together."""
+    if not is_filled_value(value):
+        return ""
+
+    tel = str(value).strip().lower()
+    digits = re.sub(r"\D", "", tel)
+    return digits
+
+
 def build_branch_sales_kpi(df):
     required_info_fields = [
         "Name",
@@ -600,6 +610,18 @@ def main():
             display_df = telegram_df[available_columns].copy()
             display_df = prepare_sales_df(display_df)
 
+            # Count each Tel across the complete dataset before applying any
+            # branch, potential, or date filters.
+            if "Tel" in display_df.columns:
+                tel_count_keys = display_df["Tel"].map(normalize_tel_for_count)
+                tel_counts_all_dates = tel_count_keys[tel_count_keys != ""].value_counts()
+                display_df["Tel_Count_All_Dates"] = tel_count_keys.map(
+                    tel_counts_all_dates
+                ).fillna(0).astype(int)
+                display_df["Tel_Count_All_Dates"] = display_df[
+                    "Tel_Count_All_Dates"
+                ].map(lambda count: f"🔢 {count}" if count else "")
+
             st.markdown("### 📊 Customer Portfolio Overview")
 
             today = datetime.now(pytz.timezone("Asia/Phnom_Penh")).date()
@@ -924,6 +946,7 @@ def main():
                 visible_columns = [
                     "Name",
                     "Tel",
+                    "Tel_Count_All_Dates",
                     "Bank",
                     "Business",
                     "Amount",
@@ -995,6 +1018,7 @@ def main():
                         "Potential_Level": "Potential",
                         "Potential_Product": "Product",
                         "Loan_Type": "Loan Type",
+                        "Tel_Count_All_Dates": "🔢 Tel Count (All Dates)",
                     }
                 )
 
