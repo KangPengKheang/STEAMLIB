@@ -425,39 +425,65 @@ def style_sales_dataframe(df):
     def highlight_row(row):
         potential = str(row.get("Potential", "")).strip().upper()
         if potential == "H":
-            return ["background-color: #FFF8DB"] * len(row)
+            return ["background-color: #FFFBEB"] * len(row)
         elif potential == "M":
-            return ["background-color: #F7FCF5"] * len(row)
+            return ["background-color: #F6FBF8"] * len(row)
         return [""] * len(row)
 
     def color_potential(val):
         val = str(val).strip().upper()
         if val == "H":
-            return "color: #B45309; font-weight: bold; font-size: 14px;"
+            return "background-color: #FEF3C7; color: #92400E; font-weight: 800; text-align: center;"
         elif val == "M":
-            return "color: #D97706; font-weight: bold; font-size: 14px;"
+            return "background-color: #DBEAFE; color: #1E40AF; font-weight: 800; text-align: center;"
         elif val == "L":
-            return "color: #15803D; font-weight: bold; font-size: 14px;"
-        return "color: #6B7280; font-size: 14px;"
+            return "background-color: #DCFCE7; color: #166534; font-weight: 800; text-align: center;"
+        return "background-color: #F3F4F6; color: #4B5563; font-weight: 700; text-align: center;"
+
+    def color_status(val):
+        status = str(val).strip().lower()
+        if any(word in status for word in ["approved", "complete", "active", "success"]):
+            return "background-color: #DCFCE7; color: #166534; font-weight: 700; text-align: center;"
+        if any(word in status for word in ["pending", "follow", "progress", "waiting"]):
+            return "background-color: #FEF3C7; color: #92400E; font-weight: 700; text-align: center;"
+        if any(word in status for word in ["reject", "cancel", "decline", "inactive"]):
+            return "background-color: #FEE2E2; color: #991B1B; font-weight: 700; text-align: center;"
+        return "background-color: #F3F4F6; color: #4B5563; font-weight: 600; text-align: center;"
 
     styler = styler.apply(highlight_row, axis=1)
 
     if "Potential" in df.columns:
         styler = styler.map(color_potential, subset=["Potential"])
 
+    if "Status" in df.columns:
+        styler = styler.map(color_status, subset=["Status"])
+
+    if "Tel" in df.columns:
+        styler = styler.map(
+            lambda _: "color: #0F3D5E; font-weight: 700; white-space: nowrap;",
+            subset=["Tel"],
+        )
+
     if "Amount" in df.columns:
         styler = styler.map(
-            lambda _: "color: #166534; font-weight: bold; font-size: 14px;",
+            lambda _: "color: #166534; font-weight: 800; text-align: right; white-space: nowrap;",
             subset=["Amount"],
+        )
+
+    if "Bank" in df.columns:
+        styler = styler.map(
+            lambda _: "color: #1F2937; font-weight: 700;",
+            subset=["Bank"],
         )
 
     styler = styler.set_properties(
         **{
             "text-align": "left",
             "white-space": "pre-wrap",
-            "font-size": "16px",
-            "border": "1px solid #E5E7EB",
-            "padding": "10px 14px",
+            "font-size": "14px",
+            "color": "#273444",
+            "border-bottom": "1px solid #E5E7EB",
+            "padding": "11px 12px",
         }
     )
 
@@ -468,28 +494,35 @@ def style_sales_dataframe(df):
                 "props": [
                     ("table-layout", "fixed"),
                     ("width", "100%"),
-                    ("border-collapse", "collapse"),
+                    ("border-collapse", "separate"),
+                    ("border-spacing", "0"),
+                    ("font-family", "Inter, Segoe UI, Arial, sans-serif"),
                 ],
             },
             {
                 "selector": "th",
                 "props": [
-                    ("background", "linear-gradient(90deg, #008A4A 0%, #008A4A 100%)"),
-                    ("color", "white"),
-                    ("font-weight", "bold"),
-                    ("text-align", "center"),
-                    ("font-size", "15px"),
-                    ("border", "1px solid #166534"),
-                    ("padding", "10px 14px"),
+                    ("background-color", "#0B4F3C"),
+                    ("color", "#FFFFFF"),
+                    ("font-weight", "700"),
+                    ("text-align", "left"),
+                    ("font-size", "13px"),
+                    ("letter-spacing", "0.35px"),
+                    ("border-bottom", "3px solid #C6A15B"),
+                    ("padding", "12px"),
                 ],
             },
             {
                 "selector": "td",
                 "props": [
-                    ("border", "1px solid #E5E7EB"),
-                    ("padding", "10px 14px"),
-                    ("vertical-align", "top"),
+                    ("border-right", "1px solid #EEF1F4"),
+                    ("vertical-align", "middle"),
+                    ("line-height", "1.35"),
                 ],
+            },
+            {
+                "selector": "tbody tr:hover td",
+                "props": [("background-color", "#ECFDF5")],
             },
         ]
     )
@@ -1053,10 +1086,32 @@ def main():
 
                 table_page_df = customer_display_df.iloc[page_start:page_end].copy()
                 styled_df = style_sales_dataframe(table_page_df)
+                preferred_column_config = {
+                    "Name": st.column_config.TextColumn("Customer Name", width="medium"),
+                    "Tel": st.column_config.TextColumn("Telephone / Frequency", width="medium"),
+                    "Bank": st.column_config.TextColumn("Bank", width="small"),
+                    "Business": st.column_config.TextColumn("Business", width="medium"),
+                    "Amount": st.column_config.TextColumn("Amount", width="small"),
+                    "Interest": st.column_config.TextColumn("Interest", width="small"),
+                    "Loan Type": st.column_config.TextColumn("Loan Type", width="medium"),
+                    "Tenure": st.column_config.TextColumn("Tenure", width="small"),
+                    "Maturity": st.column_config.TextColumn("Maturity", width="small"),
+                    "Potential": st.column_config.TextColumn("Potential", width="small"),
+                    "Product": st.column_config.TextColumn("Product", width="medium"),
+                    "Status": st.column_config.TextColumn("Status", width="small"),
+                    "Remark": st.column_config.TextColumn("Remark", width="large"),
+                }
+                table_column_config = {
+                    column: preferred_column_config[column]
+                    for column in table_page_df.columns
+                    if column in preferred_column_config
+                }
                 st.dataframe(
                     styled_df,
                     width="stretch",
+                    height=620,
                     hide_index=True,
+                    column_config=table_column_config,
                 )
 
                 st.markdown("### 🚀 Sales Actions")
