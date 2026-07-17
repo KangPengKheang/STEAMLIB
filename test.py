@@ -176,8 +176,22 @@ def shorten_branch_name(branch_name):
 
 
 def is_filled_value(value):
-    if pd.isna(value):
+    if value is None:
         return False
+
+    # Some Sheet cells can arrive as non-scalar values. Avoid using an array-like
+    # result from pd.isna() directly in an if statement, which raises ValueError.
+    try:
+        missing = pd.isna(value)
+        if isinstance(missing, (bool, np.bool_)) and missing:
+            return False
+        if isinstance(missing, (list, tuple, np.ndarray, pd.Series)) and np.all(
+            missing
+        ):
+            return False
+    except (TypeError, ValueError):
+        pass
+
     value_str = str(value).strip()
     invalid_tokens = {
         "",
@@ -873,11 +887,15 @@ def main():
 
             st.markdown("### 📈 Filtered Summary")
 
-            phone_number_count = (
-                int(filtered_df["Tel"].map(is_filled_value).sum())
-                if "Tel" in filtered_df.columns
-                else 0
-            )
+            if "Tel" in filtered_df.columns:
+                tel_values = filtered_df.loc[:, "Tel"]
+                phone_number_count = sum(
+                    1
+                    for value in np.asarray(tel_values, dtype=object).reshape(-1)
+                    if is_filled_value(value)
+                )
+            else:
+                phone_number_count = 0
 
             m1, m2, m3, m4, m5 = st.columns(5)
             with m1:
