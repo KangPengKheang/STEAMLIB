@@ -494,6 +494,7 @@ def style_sales_dataframe(df):
                 "props": [
                     ("table-layout", "fixed"),
                     ("width", "100%"),
+                    ("min-width", "1600px"),
                     ("border-collapse", "separate"),
                     ("border-spacing", "0"),
                     ("font-family", "Inter, Segoe UI, Arial, sans-serif"),
@@ -510,6 +511,9 @@ def style_sales_dataframe(df):
                     ("letter-spacing", "0.35px"),
                     ("border-bottom", "3px solid #C6A15B"),
                     ("padding", "12px"),
+                    ("position", "sticky"),
+                    ("top", "0"),
+                    ("z-index", "2"),
                 ],
             },
             {
@@ -1057,61 +1061,30 @@ def main():
                     }
                 )
 
-                table_col1, table_col2 = st.columns([1, 2])
-                with table_col1:
-                    rows_per_page = st.selectbox(
-                        "Rows per page",
-                        [50, 100, 200, 500],
-                        index=1,
-                    )
-
-                total_pages = max(
-                    1, (len(customer_display_df) + rows_per_page - 1) // rows_per_page
-                )
-                with table_col2:
-                    page_number = st.number_input(
-                        "Page",
-                        min_value=1,
-                        max_value=total_pages,
-                        value=1,
-                        step=1,
-                    )
-
-                page_start = (page_number - 1) * rows_per_page
-                page_end = min(page_start + rows_per_page, len(customer_display_df))
+                maximum_table_rows = 150
+                table_display_df = customer_display_df.head(maximum_table_rows).copy()
                 st.caption(
-                    f"Displaying rows {page_start + 1:,}–{page_end:,} "
-                    f"of {len(customer_display_df):,} (page {page_number} of {total_pages})"
+                    f"Showing {len(table_display_df):,} of {len(customer_display_df):,} "
+                    "matching customers (maximum 150 rows)."
                 )
 
-                table_page_df = customer_display_df.iloc[page_start:page_end].copy()
-                styled_df = style_sales_dataframe(table_page_df)
-                preferred_column_config = {
-                    "Name": st.column_config.TextColumn("Customer Name", width="medium"),
-                    "Tel": st.column_config.TextColumn("Telephone / Frequency", width="medium"),
-                    "Bank": st.column_config.TextColumn("Bank", width="small"),
-                    "Business": st.column_config.TextColumn("Business", width="medium"),
-                    "Amount": st.column_config.TextColumn("Amount", width="small"),
-                    "Interest": st.column_config.TextColumn("Interest", width="small"),
-                    "Loan Type": st.column_config.TextColumn("Loan Type", width="medium"),
-                    "Tenure": st.column_config.TextColumn("Tenure", width="small"),
-                    "Maturity": st.column_config.TextColumn("Maturity", width="small"),
-                    "Potential": st.column_config.TextColumn("Potential", width="small"),
-                    "Product": st.column_config.TextColumn("Product", width="medium"),
-                    "Status": st.column_config.TextColumn("Status", width="small"),
-                    "Remark": st.column_config.TextColumn("Remark", width="large"),
-                }
-                table_column_config = {
-                    column: preferred_column_config[column]
-                    for column in table_page_df.columns
-                    if column in preferred_column_config
-                }
-                st.dataframe(
-                    styled_df,
-                    width="stretch",
-                    height=620,
-                    hide_index=True,
-                    column_config=table_column_config,
+                styled_df = style_sales_dataframe(table_display_df)
+                table_html = styled_df.to_html(escape=False)
+                st.markdown(
+                    f"""
+                    <style>
+                        .banking-table-container {{
+                            max-height: 680px;
+                            overflow: auto;
+                            border: 1px solid #D7DEE5;
+                            border-radius: 10px;
+                            box-shadow: 0 4px 14px rgba(15, 61, 46, 0.08);
+                            background: #FFFFFF;
+                        }}
+                    </style>
+                    <div class="banking-table-container">{table_html}</div>
+                    """,
+                    unsafe_allow_html=True,
                 )
 
                 st.markdown("### 🚀 Sales Actions")
