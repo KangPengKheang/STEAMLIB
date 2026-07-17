@@ -223,6 +223,15 @@ def normalize_tel_for_count(value):
     return digits
 
 
+def format_tel_value(value):
+    """Add a leading zero only to telephone-like values, never labels such as OTG."""
+    text = str(value).strip()
+    digits = re.sub(r"\D", "", text)
+    if not digits or text.lower() == "nan":
+        return text
+    return f"0{text}" if not digits.startswith("0") else text
+
+
 def build_branch_sales_kpi(df):
     required_info_fields = [
         "Name",
@@ -403,9 +412,7 @@ def prepare_sales_df(raw_df):
         ]
 
     if "Tel" in df.columns:
-        df["Tel"] = df["Tel"].astype(str).apply(
-            lambda x: f"0{x}" if x and x != "nan" and not x.startswith("0") else x
-        )
+        df["Tel"] = df["Tel"].apply(format_tel_value)
 
     if "Amount" in df.columns:
         df["Amount"] = df["Amount"].apply(format_amount)
@@ -995,7 +1002,9 @@ def main():
                 if "Tel" in customer_display_df.columns:
                     customer_display_df["Tel"] = customer_display_df["Tel"].map(
                         lambda tel: (
-                            f"{tel} 🔢 {int(tel_counts_all_dates.get(normalize_tel_for_count(tel), 0))}"
+                            f'{tel}<span style="float: right; color: #166534; '
+                            f'font-weight: 800; margin-left: 12px;">🔢 '
+                            f'{int(tel_counts_all_dates.get(normalize_tel_for_count(tel), 0))}</span>'
                             if normalize_tel_for_count(tel)
                             else str(tel)
                         )
