@@ -795,11 +795,14 @@ def main():
             with filter_col3:
                 date_filter_type = st.radio(
                     "📅 Date Filter",
-                    ["Today", "Date Range"],
+                    ["All Dates", "Today", "Date Range"],
                     horizontal=True,
                 )
 
-                if date_filter_type == "Today":
+                if date_filter_type == "All Dates":
+                    start_date = min_date
+                    end_date = max_date
+                elif date_filter_type == "Today":
                     start_date = today
                     end_date = today
                 else:
@@ -996,7 +999,11 @@ def main():
                 )
 
                 styled_df = style_sales_dataframe(customer_display_df)
-                st.write(styled_df.to_html(escape=False), unsafe_allow_html=True)
+                st.dataframe(
+                    styled_df,
+                    width="stretch",
+                    hide_index=True,
+                )
 
                 st.markdown("### 🚀 Sales Actions")
 
