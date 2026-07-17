@@ -612,15 +612,10 @@ def main():
 
             # Count each Tel across the complete dataset before applying any
             # branch, potential, or date filters.
+            tel_counts_all_dates = pd.Series(dtype="int64")
             if "Tel" in display_df.columns:
                 tel_count_keys = display_df["Tel"].map(normalize_tel_for_count)
                 tel_counts_all_dates = tel_count_keys[tel_count_keys != ""].value_counts()
-                display_df["Tel_Count_All_Dates"] = tel_count_keys.map(
-                    tel_counts_all_dates
-                ).fillna(0).astype(int)
-                display_df["Tel_Count_All_Dates"] = display_df[
-                    "Tel_Count_All_Dates"
-                ].map(lambda count: f"🔢 {count}" if count else "")
 
             st.markdown("### 📊 Customer Portfolio Overview")
 
@@ -946,7 +941,6 @@ def main():
                 visible_columns = [
                     "Name",
                     "Tel",
-                    "Tel_Count_All_Dates",
                     "Bank",
                     "Business",
                     "Amount",
@@ -964,6 +958,15 @@ def main():
                 ]
 
                 customer_display_df = filtered_df[visible_columns].copy()
+
+                if "Tel" in customer_display_df.columns:
+                    customer_display_df["Tel"] = customer_display_df["Tel"].map(
+                        lambda tel: (
+                            f"{tel} 🔢 {int(tel_counts_all_dates.get(normalize_tel_for_count(tel), 0))}"
+                            if normalize_tel_for_count(tel)
+                            else str(tel)
+                        )
+                    )
 
                 if "Potential_Level" in customer_display_df.columns:
                     sort_order = {"H": 1, "M": 2, "L": 3}
@@ -1018,7 +1021,6 @@ def main():
                         "Potential_Level": "Potential",
                         "Potential_Product": "Product",
                         "Loan_Type": "Loan Type",
-                        "Tel_Count_All_Dates": "🔢 Tel Count (All Dates)",
                     }
                 )
 
