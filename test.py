@@ -286,6 +286,7 @@ def connect_to_google_sheets():
         return gc
 
     except Exception as e:
+        st.session_state["google_sheets_error"] = str(e)
         st.error(f"❌ Failed to connect to Google Sheets: {str(e)}")
         try:
             st.info(
@@ -317,7 +318,20 @@ def load_sheet_data(_gc, sheet_id, worksheet_name):
             st.error(f"❌ Spreadsheet not found with ID: {sheet_id}")
             return pd.DataFrame()
         except Exception as e:
-            st.error(f"❌ Failed to open spreadsheet: {str(e)}")
+            error_message = str(e)
+            st.session_state["google_sheets_error"] = error_message
+            if "Invalid JWT Signature" in error_message:
+                st.error(
+                    "❌ Google rejected the service-account signature. The configured "
+                    "private key is no longer active for this service account."
+                )
+                st.info(
+                    "💡 The spreadsheet and worksheet settings are unchanged. An active "
+                    "private key for the same service account must be supplied by the "
+                    "Google Cloud project administrator."
+                )
+            else:
+                st.error(f"❌ Failed to open spreadsheet: {error_message}")
             return pd.DataFrame()
 
         try:
@@ -331,6 +345,7 @@ def load_sheet_data(_gc, sheet_id, worksheet_name):
             if not data:
                 st.info(f"📭 No data found in worksheet '{worksheet_name}'")
                 return pd.DataFrame()
+            st.session_state.pop("google_sheets_error", None)
             return pd.DataFrame(data)
 
         except Exception as e:
@@ -559,6 +574,7 @@ def main():
                 "Maturity",
                 "Potential_Level",
                 "Potential_Product",
+                "Status",
                 "Source_Channel",
                 "Message_Date",
                 "Remark",
@@ -857,7 +873,13 @@ def main():
 
             st.markdown("### 📈 Filtered Summary")
 
-            m1, m2, m3, m4 = st.columns(4)
+            phone_number_count = (
+                int(filtered_df["Tel"].map(is_filled_value).sum())
+                if "Tel" in filtered_df.columns
+                else 0
+            )
+
+            m1, m2, m3, m4, m5 = st.columns(5)
             with m1:
                 st.metric("Total Customers", total_customers)
             with m2:
@@ -872,6 +894,8 @@ def main():
                 st.metric("Medium Potential", medium_potential)
             with m4:
                 st.metric("Low Potential", low_potential)
+            with m5:
+                st.metric("📞 Phone Numbers", phone_number_count)
 
             st.markdown(f"### 👥 Showing {len(filtered_df)} Customers")
 
@@ -888,6 +912,7 @@ def main():
                     "Maturity",
                     "Potential_Level",
                     "Potential_Product",
+                    "Status",
                     "Remark",
                 ]
                 visible_columns = [
@@ -1016,9 +1041,10 @@ def main():
                 )
 
         else:
-            st.info(
-                "💡 No customer data available. Please ensure data is pushed to Google Sheets first."
-            )
+            if "google_sheets_error" not in st.session_state:
+                st.info(
+                    "💡 No customer data available. Please ensure data is pushed to Google Sheets first."
+                )
 
             with st.expander("🆕 How to get started"):
                 st.markdown(
