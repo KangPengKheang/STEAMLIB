@@ -494,7 +494,6 @@ def style_sales_dataframe(df):
                 "props": [
                     ("table-layout", "fixed"),
                     ("width", "100%"),
-                    ("min-width", "1600px"),
                     ("border-collapse", "separate"),
                     ("border-spacing", "0"),
                     ("font-family", "Inter, Segoe UI, Arial, sans-serif"),
@@ -511,9 +510,6 @@ def style_sales_dataframe(df):
                     ("letter-spacing", "0.35px"),
                     ("border-bottom", "3px solid #C6A15B"),
                     ("padding", "12px"),
-                    ("position", "sticky"),
-                    ("top", "0"),
-                    ("z-index", "2"),
                 ],
             },
             {
@@ -1070,22 +1066,7 @@ def main():
 
                 styled_df = style_sales_dataframe(table_display_df)
                 table_html = styled_df.to_html(escape=False)
-                st.markdown(
-                    f"""
-                    <style>
-                        .banking-table-container {{
-                            max-height: 680px;
-                            overflow: auto;
-                            border: 1px solid #D7DEE5;
-                            border-radius: 10px;
-                            box-shadow: 0 4px 14px rgba(15, 61, 46, 0.08);
-                            background: #FFFFFF;
-                        }}
-                    </style>
-                    <div class="banking-table-container">{table_html}</div>
-                    """,
-                    unsafe_allow_html=True,
-                )
+                st.write(table_html, unsafe_allow_html=True)
 
                 st.markdown("### 🚀 Sales Actions")
 
