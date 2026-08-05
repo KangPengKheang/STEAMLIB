@@ -11,7 +11,6 @@ import pytz
 from rapidfuzz import fuzz, process
 import time
 import folium
-from streamlit_folium import st_folium
 from sklearn.cluster import DBSCAN
 import numpy as np
 import random
@@ -26,6 +25,7 @@ import gspread
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 SHEET_ID = "1wM7DTHizhg_A3h0qV3EhX4os4hk46uolW-ESQSJkgZs"
 WORKSHEET_NAME = "retail_data"
+SENDER_NAME_MAPPING_FILE = os.path.join(BASE_DIR, "RM_standard_name.xlsx")
 
 # === MUST BE THE FIRST STREAMLIT COMMAND ===
 st.set_page_config(
@@ -390,6 +390,51 @@ def load_sheet_data(_gc, sheet_id, worksheet_name):
         return pd.DataFrame()
 
 
+@st.cache_data(ttl=3600)
+def load_sender_name_mapping():
+    """Load sender ID -> standard name mapping from the local Excel file."""
+    try:
+        if not os.path.exists(SENDER_NAME_MAPPING_FILE):
+            return {}
+
+        mapping_df = pd.read_excel(SENDER_NAME_MAPPING_FILE, sheet_name=0, dtype=str)
+        mapping_df = mapping_df.rename(columns=str.strip)
+        if "Sender_ID" not in mapping_df.columns or "Standard_Name" not in mapping_df.columns:
+            return {}
+
+        mapping_df = mapping_df.dropna(subset=["Sender_ID", "Standard_Name"]).copy()
+        mapping_df["Sender_ID"] = mapping_df["Sender_ID"].astype(str).str.strip()
+        mapping_df["Standard_Name"] = mapping_df["Standard_Name"].astype(str).str.strip()
+        return mapping_df.set_index("Sender_ID")["Standard_Name"].to_dict()
+    except Exception as e:
+        st.warning(f"Unable to load sender name mapping: {e}")
+        return {}
+
+
+def add_standard_sender_name(df):
+    """Add Sender Name column based on Sender_ID mapping or existing Sender_Name values."""
+    df = df.copy()
+    sender_map = load_sender_name_mapping()
+
+    if "Sender_ID" in df.columns:
+        df["Sender_ID"] = df["Sender_ID"].astype(str).str.strip()
+    if "Sender_Name" in df.columns:
+        df["Sender_Name"] = df["Sender_Name"].astype(str).str.strip()
+
+    # Prefer mapped standard name from Sender_ID first
+    df["Sender Name"] = ""
+    if "Sender_ID" in df.columns:
+        df["Sender Name"] = df["Sender_ID"].map(sender_map).fillna("")
+
+    # Fallback to existing Sender_Name if mapping is missing
+    if "Sender_Name" in df.columns:
+        df["Sender Name"] = df["Sender Name"].replace("", pd.NA)
+        fallback = df["Sender_Name"].where(df["Sender Name"].astype(str).str.strip() != "", pd.NA)
+        df["Sender Name"] = df["Sender Name"].fillna(fallback).fillna("")
+
+    return df
+
+
 @st.cache_data
 def get_telegram_data():
     gc = connect_to_google_sheets()
@@ -626,6 +671,7 @@ def main():
 
         if not telegram_df.empty:
             required_columns = [
+                "Sender Name",
                 "Sender_Name",
                 "Name",
                 "Tel",
@@ -648,6 +694,7 @@ def main():
                 col for col in required_columns if col in telegram_df.columns
             ]
             display_df = telegram_df[available_columns].copy()
+            display_df = add_standard_sender_name(display_df)
             display_df = prepare_sales_df(display_df)
 
             # Count each Tel across the complete dataset before applying any
@@ -979,6 +1026,7 @@ def main():
 
             if len(filtered_df) > 0:
                 visible_columns = [
+                    "Sender Name",
                     "Name",
                     "Tel",
                     "Bank",
