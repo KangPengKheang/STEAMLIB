@@ -461,11 +461,10 @@ def add_standard_sender_name(df):
             df.loc[missing_mask, "Sender_ID_Normalized"].map(normalized_map).fillna("")
         )
 
-    # Fallback to existing Sender_Name if mapping is missing
+    # If Sender_ID is not mapped, use the raw Sender_Name value from the sheet
     if "Sender_Name" in df.columns:
-        df["RM"] = df["RM"].replace("", pd.NA)
-        fallback = df["Sender_Name"].where(df["RM"].astype(str).str.strip() == "", pd.NA)
-        df["RM"] = df["RM"].fillna(fallback).fillna("")
+        missing_mask = df["RM"].astype(str).str.strip() == ""
+        df.loc[missing_mask, "RM"] = df.loc[missing_mask, "Sender_Name"].fillna("")
 
     # Remove internal helper column before display
     if "Sender_ID_Normalized" in df.columns:
