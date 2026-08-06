@@ -412,14 +412,13 @@ def load_sheet_data(_gc, sheet_id, worksheet_name):
         return pd.DataFrame()
 
 
-@st.cache_data(ttl=3600)
-def load_sender_name_mapping():
+def _load_sender_name_mapping(mapping_file_path, mapping_file_mtime):
     """Load sender ID -> standard name mapping from the local Excel file."""
     try:
-        if not os.path.exists(SENDER_NAME_MAPPING_FILE):
+        if not os.path.exists(mapping_file_path):
             return {}, {}
 
-        mapping_df = pd.read_excel(SENDER_NAME_MAPPING_FILE, sheet_name=0, dtype=str)
+        mapping_df = pd.read_excel(mapping_file_path, sheet_name=0, dtype=str)
         mapping_df = mapping_df.rename(columns=str.strip)
         if "Sender_ID" not in mapping_df.columns or "Standard_Name" not in mapping_df.columns:
             return {}, {}
@@ -436,14 +435,21 @@ def load_sender_name_mapping():
         st.warning(f"Unable to load sender name mapping: {e}")
         return {}, {}
 
+@st.cache_data(ttl=3600)
+def load_sender_name_mapping(mapping_file_path, mapping_file_mtime):
+    return _load_sender_name_mapping(mapping_file_path, mapping_file_mtime)
+
 
 def add_standard_sender_name(df):
     """Add RM column based on Sender_ID mapping or existing Sender_Name values."""
     df = df.copy()
-    raw_map, normalized_map = load_sender_name_mapping()
+    mapping_mtime = None
+    if os.path.exists(SENDER_NAME_MAPPING_FILE):
+        mapping_mtime = os.path.getmtime(SENDER_NAME_MAPPING_FILE)
+    raw_map, normalized_map = load_sender_name_mapping(SENDER_NAME_MAPPING_FILE, mapping_mtime)
 
-    sender_id_col = find_sender_column(df, ["Sender_ID", "Sender ID", "sender_id", "sender id"])
-    sender_name_col = find_sender_column(df, ["Sender_Name", "Sender Name", "sender_name", "sender name"])
+    sender_id_col = find_sender_column(df, ["Sender_ID", "Sender ID", "sender_id", "sender id", "senderid", "sender-id"])
+    sender_name_col = find_sender_column(df, ["Sender_Name", "Sender Name", "sender_name", "sender name", "sendername"])
 
     if sender_id_col is not None:
         df["Sender_ID"] = df[sender_id_col].astype(str).str.strip()
