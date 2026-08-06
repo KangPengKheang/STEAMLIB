@@ -438,7 +438,7 @@ def load_sender_name_mapping():
 
 
 def add_standard_sender_name(df):
-    """Add Sender Name column based on Sender_ID mapping or existing Sender_Name values."""
+    """Add RM column based on Sender_ID mapping or existing Sender_Name values."""
     df = df.copy()
     raw_map, normalized_map = load_sender_name_mapping()
 
@@ -452,20 +452,20 @@ def add_standard_sender_name(df):
         df["Sender_Name"] = df[sender_name_col].astype(str).str.strip()
 
     # Prefer mapped standard name from Sender_ID first
-    df["Sender Name"] = ""
+    df["RM"] = ""
     if "Sender_ID" in df.columns:
-        df["Sender Name"] = df["Sender_ID"].map(raw_map).fillna("")
+        df["RM"] = df["Sender_ID"].map(raw_map).fillna("")
     if "Sender_ID_Normalized" in df.columns:
-        missing_mask = df["Sender Name"].astype(str).str.strip() == ""
-        df.loc[missing_mask, "Sender Name"] = (
+        missing_mask = df["RM"].astype(str).str.strip() == ""
+        df.loc[missing_mask, "RM"] = (
             df.loc[missing_mask, "Sender_ID_Normalized"].map(normalized_map).fillna("")
         )
 
     # Fallback to existing Sender_Name if mapping is missing
     if "Sender_Name" in df.columns:
-        df["Sender Name"] = df["Sender Name"].replace("", pd.NA)
-        fallback = df["Sender_Name"].where(df["Sender Name"].astype(str).str.strip() != "", pd.NA)
-        df["Sender Name"] = df["Sender Name"].fillna(fallback).fillna("")
+        df["RM"] = df["RM"].replace("", pd.NA)
+        fallback = df["Sender_Name"].where(df["RM"].astype(str).str.strip() == "", pd.NA)
+        df["RM"] = df["RM"].fillna(fallback).fillna("")
 
     # Remove internal helper column before display
     if "Sender_ID_Normalized" in df.columns:
@@ -710,7 +710,7 @@ def main():
 
         if not telegram_df.empty:
             required_columns = [
-                "Sender Name",
+                "RM",
                 "Sender_ID",
                 "Sender_Name",
                 "Name",
@@ -1066,7 +1066,7 @@ def main():
 
             if len(filtered_df) > 0:
                 visible_columns = [
-                    "Sender Name",
+                    "RM",
                     "Name",
                     "Tel",
                     "Bank",
