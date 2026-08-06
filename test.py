@@ -232,6 +232,28 @@ def format_tel_value(value):
     return f"0{text}" if not digits.startswith("0") else text
 
 
+def normalize_sender_id(value):
+    """Normalize sender ID values to digits only and remove common country prefixes."""
+    if not is_filled_value(value):
+        return ""
+
+    sender_id = str(value).strip().lower()
+    digits = re.sub(r"\D", "", sender_id)
+    if digits.startswith("855"):
+        digits = digits[3:]
+    if digits.startswith("0") and len(digits) > 1:
+        digits = digits[1:]
+    return digits
+
+
+def find_sender_column(df, possible_names):
+    lower_names = {col.strip().lower(): col for col in df.columns}
+    for name in possible_names:
+        if name.lower() in lower_names:
+            return lower_names[name.lower()]
+    return None
+
+
 def build_branch_sales_kpi(df):
     required_info_fields = [
         "Name",
@@ -395,42 +417,59 @@ def load_sender_name_mapping():
     """Load sender ID -> standard name mapping from the local Excel file."""
     try:
         if not os.path.exists(SENDER_NAME_MAPPING_FILE):
-            return {}
+            return {}, {}
 
         mapping_df = pd.read_excel(SENDER_NAME_MAPPING_FILE, sheet_name=0, dtype=str)
         mapping_df = mapping_df.rename(columns=str.strip)
         if "Sender_ID" not in mapping_df.columns or "Standard_Name" not in mapping_df.columns:
-            return {}
+            return {}, {}
 
         mapping_df = mapping_df.dropna(subset=["Sender_ID", "Standard_Name"]).copy()
         mapping_df["Sender_ID"] = mapping_df["Sender_ID"].astype(str).str.strip()
         mapping_df["Standard_Name"] = mapping_df["Standard_Name"].astype(str).str.strip()
-        return mapping_df.set_index("Sender_ID")["Standard_Name"].to_dict()
+        mapping_df["Sender_ID_Normalized"] = mapping_df["Sender_ID"].apply(normalize_sender_id)
+
+        raw_map = mapping_df.set_index("Sender_ID")["Standard_Name"].to_dict()
+        normalized_map = mapping_df.set_index("Sender_ID_Normalized")["Standard_Name"].to_dict()
+        return raw_map, normalized_map
     except Exception as e:
         st.warning(f"Unable to load sender name mapping: {e}")
-        return {}
+        return {}, {}
 
 
 def add_standard_sender_name(df):
     """Add Sender Name column based on Sender_ID mapping or existing Sender_Name values."""
     df = df.copy()
-    sender_map = load_sender_name_mapping()
+    raw_map, normalized_map = load_sender_name_mapping()
 
-    if "Sender_ID" in df.columns:
-        df["Sender_ID"] = df["Sender_ID"].astype(str).str.strip()
-    if "Sender_Name" in df.columns:
-        df["Sender_Name"] = df["Sender_Name"].astype(str).str.strip()
+    sender_id_col = find_sender_column(df, ["Sender_ID", "Sender ID", "sender_id", "sender id"])
+    sender_name_col = find_sender_column(df, ["Sender_Name", "Sender Name", "sender_name", "sender name"])
+
+    if sender_id_col is not None:
+        df["Sender_ID"] = df[sender_id_col].astype(str).str.strip()
+        df["Sender_ID_Normalized"] = df["Sender_ID"].apply(normalize_sender_id)
+    if sender_name_col is not None:
+        df["Sender_Name"] = df[sender_name_col].astype(str).str.strip()
 
     # Prefer mapped standard name from Sender_ID first
     df["Sender Name"] = ""
     if "Sender_ID" in df.columns:
-        df["Sender Name"] = df["Sender_ID"].map(sender_map).fillna("")
+        df["Sender Name"] = df["Sender_ID"].map(raw_map).fillna("")
+    if "Sender_ID_Normalized" in df.columns:
+        missing_mask = df["Sender Name"].astype(str).str.strip() == ""
+        df.loc[missing_mask, "Sender Name"] = (
+            df.loc[missing_mask, "Sender_ID_Normalized"].map(normalized_map).fillna("")
+        )
 
     # Fallback to existing Sender_Name if mapping is missing
     if "Sender_Name" in df.columns:
         df["Sender Name"] = df["Sender Name"].replace("", pd.NA)
         fallback = df["Sender_Name"].where(df["Sender Name"].astype(str).str.strip() != "", pd.NA)
         df["Sender Name"] = df["Sender Name"].fillna(fallback).fillna("")
+
+    # Remove internal helper column before display
+    if "Sender_ID_Normalized" in df.columns:
+        df = df.drop(columns=["Sender_ID_Normalized"])
 
     return df
 
@@ -672,6 +711,7 @@ def main():
         if not telegram_df.empty:
             required_columns = [
                 "Sender Name",
+                "Sender_ID",
                 "Sender_Name",
                 "Name",
                 "Tel",
