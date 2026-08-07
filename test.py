@@ -254,6 +254,21 @@ def find_sender_column(df, possible_names):
     return None
 
 
+def categorize_status_category(status_value):
+    status = str(status_value).strip().lower()
+    if status in ["", "nan", "none", "null"]:
+        return ""
+    if "not interested" in status or status == "ni":
+        return "NI"
+    if "appointment" in status or ("interested" in status and "appointment" in status) or status == "ap":
+        return "AP"
+    if "open for more information" in status or ("open" in status and any(token in status for token in ["information", "info", "more"])) or status == "op":
+        return "OP"
+    if "study initiated" in status or "study" in status or status == "st":
+        return "ST"
+    return ""
+
+
 def build_branch_sales_kpi(df):
     required_info_fields = [
         "Name",
@@ -935,9 +950,9 @@ def main():
                 )
 
             with filter_col2:
-                selected_potential = st.selectbox(
-                    "👤 Customer Potential",
-                    ["All", "H", "M", "L"],
+                selected_status = st.selectbox(
+                    "👤 Customer Status",
+                    ["All", "ST", "AP", "OP", "NI"],
                     index=0,
                 )
 
@@ -975,10 +990,13 @@ def main():
             # =========================
             filtered_df = display_df.copy()
 
-            if selected_potential != "All" and "Potential_Level" in filtered_df.columns:
+            if selected_status != "All" and "Status" in filtered_df.columns:
                 filtered_df = filtered_df[
-                    filtered_df["Potential_Level"].astype(str).str.strip().str.upper()
-                    == selected_potential
+                    filtered_df["Status"]
+                    .astype(str)
+                    .apply(categorize_status_category)
+                    .str.upper()
+                    == selected_status
                 ]
 
             if selected_branch != "All" and "Source_Channel" in filtered_df.columns:
@@ -997,75 +1015,31 @@ def main():
             # KPI
             # =========================
             total_customers = len(filtered_df)
-            high_potential = (
-                len(
-                    filtered_df[
-                        filtered_df["Potential_Level"]
-                        .astype(str)
-                        .str.strip()
-                        .str.upper()
-                        == "H"
-                    ]
-                )
-                if "Potential_Level" in filtered_df.columns
-                else 0
-            )
-            medium_potential = (
-                len(
-                    filtered_df[
-                        filtered_df["Potential_Level"]
-                        .astype(str)
-                        .str.strip()
-                        .str.upper()
-                        == "M"
-                    ]
-                )
-                if "Potential_Level" in filtered_df.columns
-                else 0
-            )
-            low_potential = (
-                len(
-                    filtered_df[
-                        filtered_df["Potential_Level"]
-                        .astype(str)
-                        .str.strip()
-                        .str.upper()
-                        == "L"
-                    ]
-                )
-                if "Potential_Level" in filtered_df.columns
-                else 0
-            )
+            status_counts = {"ST": 0, "AP": 0, "OP": 0, "NI": 0}
+            if "Status" in filtered_df.columns:
+                for status_value in filtered_df["Status"].astype(str):
+                    category = categorize_status_category(status_value)
+                    if category in status_counts:
+                        status_counts[category] += 1
 
             st.markdown("### 📈 Filtered Summary")
-
-            if "Tel" in filtered_df.columns:
-                tel_values = filtered_df.loc[:, "Tel"]
-                phone_number_count = sum(
-                    1
-                    for value in np.asarray(tel_values, dtype=object).reshape(-1)
-                    if is_filled_value(value)
-                )
-            else:
-                phone_number_count = 0
 
             m1, m2, m3, m4, m5 = st.columns(5)
             with m1:
                 st.metric("Total Customers", total_customers)
             with m2:
                 st.metric(
-                    "High Potential",
-                    high_potential,
-                    delta=f"{(high_potential / total_customers * 100):.1f}%"
-                    if total_customers
-                    else "0%",
+                    "Study initiated (ST)",
+                    status_counts["ST"],
+                    delta=(f"{(status_counts['ST'] / total_customers * 100):.1f}%"
+                           if total_customers else "0%"),
                 )
             with m3:
-                st.metric("Medium Potential", medium_potential)
+                st.metric("Interested - Appointment (AP)", status_counts["AP"])
             with m4:
-                st.metric("Low Potential", low_potential)
+                st.metric("Open for more information (OP)", status_counts["OP"])
             with m5:
-                st.metric("📞 Phone Numbers", phone_number_count)
+                st.metric("Not Interested (NI)", status_counts["NI"])
 
             st.markdown(f"### 👥 Showing {len(filtered_df)} Customers")
 
@@ -1153,6 +1127,7 @@ def main():
 
                 customer_display_df = customer_display_df.rename(
                     columns={
+                        "Name": "Customer Name",
                         "Potential_Level": "Potential",
                         "Potential_Product": "Product",
                         "Loan_Type": "Loan Type",
