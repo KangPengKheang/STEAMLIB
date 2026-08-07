@@ -1179,7 +1179,7 @@ def main():
 
                 with q1:
                     st.info(
-                        f"**High Potential:** {high_potential} customers need immediate follow-up"
+                        f"**Study initiated (ST):** {status_counts['ST']} customers are already in progress"
                     )
 
                 with q2:
