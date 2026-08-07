@@ -256,8 +256,6 @@ def find_sender_column(df, possible_names):
 
 def categorize_status_category(status_value):
     status = str(status_value).strip().lower()
-    if status in ["", "nan", "none", "null"]:
-        return ""
     if "not interested" in status or status == "ni":
         return "NI"
     if "appointment" in status or ("interested" in status and "appointment" in status) or status == "ap":
@@ -266,7 +264,7 @@ def categorize_status_category(status_value):
         return "OP"
     if "study initiated" in status or "study" in status or status == "st":
         return "ST"
-    return ""
+    return "Others"
 
 
 def build_branch_sales_kpi(df):
@@ -952,7 +950,7 @@ def main():
             with filter_col2:
                 selected_status = st.selectbox(
                     "👤 Customer Status",
-                    ["All", "ST", "AP", "OP", "NI"],
+                    ["All", "ST", "AP", "OP", "NI", "Others"],
                     index=0,
                 )
 
@@ -1015,7 +1013,7 @@ def main():
             # KPI
             # =========================
             total_customers = len(filtered_df)
-            status_counts = {"ST": 0, "AP": 0, "OP": 0, "NI": 0}
+            status_counts = {"ST": 0, "AP": 0, "OP": 0, "NI": 0, "Others": 0}
             if "Status" in filtered_df.columns:
                 for status_value in filtered_df["Status"].astype(str):
                     category = categorize_status_category(status_value)
@@ -1024,7 +1022,7 @@ def main():
 
             st.markdown("### 📈 Filtered Summary")
 
-            m1, m2, m3, m4, m5 = st.columns(5)
+            m1, m2, m3, m4, m5, m6 = st.columns(6)
             with m1:
                 st.metric("Total Customers", total_customers)
             with m2:
@@ -1040,6 +1038,8 @@ def main():
                 st.metric("Open for more information (OP)", status_counts["OP"])
             with m5:
                 st.metric("Not Interested (NI)", status_counts["NI"])
+            with m6:
+                st.metric("Others", status_counts["Others"])
 
             st.markdown(f"### 👥 Showing {len(filtered_df)} Customers")
 
