@@ -18,6 +18,7 @@ import sqlite3
 from folium.plugins import HeatMap
 import os
 import base64
+from io import BytesIO
 from google.oauth2.service_account import Credentials
 import gspread
 
@@ -129,6 +130,15 @@ def format_amount(value):
 def make_csv_download(df):
     """Create a CSV export that preserves Khmer text correctly on Windows/Excel."""
     return df.to_csv(index=False, encoding="utf-8-sig")
+
+
+def make_excel_download(df):
+    """Create an Excel export for download."""
+    buffer = BytesIO()
+    with pd.ExcelWriter(buffer, engine="openpyxl") as writer:
+        df.to_excel(writer, index=False, sheet_name="Customers")
+    buffer.seek(0)
+    return buffer.getvalue()
 
 
 def format_interest(value):
@@ -1152,29 +1162,50 @@ def main():
 
                 st.markdown("### 🚀 Sales Actions")
 
-                c1, c2, c3 = st.columns(3)
+                c1, c2, c3, c4 = st.columns(4)
 
                 with c1:
                     csv = make_csv_download(filtered_df)
                     st.download_button(
-                        label="📥 Download Filtered Data",
+                        label="📥 Download Filtered CSV",
                         data=csv,
                         file_name="filtered_customer_portfolio.csv",
-                        mime="text/csv",
+                        mime="text/csv; charset=utf-8",
                         use_container_width=True,
                     )
 
                 with c2:
-                    csv_full = make_csv_download(customer_display_df)
+                    excel_filtered = make_excel_download(filtered_df)
                     st.download_button(
-                        label="📥 Download Full Portfolio",
-                        data=csv_full,
-                        file_name="full_customer_portfolio.csv",
-                        mime="text/csv",
+                        label="📥 Download Filtered Excel",
+                        data=excel_filtered,
+                        file_name="filtered_customer_portfolio.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                         use_container_width=True,
                     )
 
                 with c3:
+                    csv_full = make_csv_download(customer_display_df)
+                    st.download_button(
+                        label="📥 Download Full CSV",
+                        data=csv_full,
+                        file_name="full_customer_portfolio.csv",
+                        mime="text/csv; charset=utf-8",
+                        use_container_width=True,
+                    )
+
+                with c4:
+                    excel_full = make_excel_download(customer_display_df)
+                    st.download_button(
+                        label="📥 Download Full Excel",
+                        data=excel_full,
+                        file_name="full_customer_portfolio.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True,
+                    )
+
+                refresh_col = st.columns(1)[0]
+                with refresh_col:
                     if st.button("🔄 Refresh Data", use_container_width=True):
                         st.rerun()
 
