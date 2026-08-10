@@ -126,6 +126,11 @@ def format_amount(value):
         return val_str
 
 
+def make_csv_download(df):
+    """Create a CSV export that preserves Khmer text correctly on Windows/Excel."""
+    return df.to_csv(index=False, encoding="utf-8-sig")
+
+
 def format_interest(value):
     if pd.isna(value) or str(value).strip() in ["", "nan", "None", "null"]:
         return ""
@@ -1150,7 +1155,7 @@ def main():
                 c1, c2, c3 = st.columns(3)
 
                 with c1:
-                    csv = filtered_df.to_csv(index=False)
+                    csv = make_csv_download(filtered_df)
                     st.download_button(
                         label="📥 Download Filtered Data",
                         data=csv,
@@ -1160,7 +1165,7 @@ def main():
                     )
 
                 with c2:
-                    csv_full = customer_display_df.to_csv(index=False)
+                    csv_full = make_csv_download(customer_display_df)
                     st.download_button(
                         label="📥 Download Full Portfolio",
                         data=csv_full,
