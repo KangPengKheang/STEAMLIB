@@ -253,6 +253,8 @@ def normalize_sender_id(value):
         return ""
 
     sender_id = str(value).strip().lower()
+    # Spreadsheet tools can expose integer IDs as strings ending in `.0`.
+    sender_id = re.sub(r"\.0+$", "", sender_id)
     digits = re.sub(r"\D", "", sender_id)
     if digits.startswith("855"):
         digits = digits[3:]
@@ -441,40 +443,66 @@ def load_sheet_data(_gc, sheet_id, worksheet_name):
 
 
 def _load_sender_name_mapping(mapping_file_path, mapping_file_mtime):
-    """Load sender ID -> standard name mapping from the local Excel file."""
+    """Load the Sender_ID -> RM_Name mapping from the local Excel file."""
     try:
         if not os.path.exists(mapping_file_path):
             return {}, {}
 
         mapping_df = pd.read_excel(mapping_file_path, sheet_name=0, dtype=str)
         mapping_df = mapping_df.rename(columns=str.strip)
-        if "Sender_ID" not in mapping_df.columns or "Standard_Name" not in mapping_df.columns:
+
+        sender_id_col = find_sender_column(
+            mapping_df,
+            ["Sender_ID", "Sender ID", "sender_id", "sender id", "senderid"],
+        )
+        rm_name_col = find_sender_column(
+            mapping_df,
+            [
+                "RM_Name",
+                "RM Name",
+                "RMName",
+                # Keep compatibility with older versions of the workbook.
+                "Standard_Name",
+                "Standard Name",
+            ],
+        )
+
+        if sender_id_col is None or rm_name_col is None:
             return {}, {}
 
-        mapping_df = mapping_df.dropna(subset=["Sender_ID", "Standard_Name"]).copy()
+        mapping_df = mapping_df[[sender_id_col, rm_name_col]].rename(
+            columns={sender_id_col: "Sender_ID", rm_name_col: "RM_Name"}
+        )
+        mapping_df = mapping_df.dropna(subset=["Sender_ID", "RM_Name"]).copy()
         mapping_df["Sender_ID"] = mapping_df["Sender_ID"].astype(str).str.strip()
-        mapping_df["Standard_Name"] = mapping_df["Standard_Name"].astype(str).str.strip()
+        mapping_df["RM_Name"] = mapping_df["RM_Name"].astype(str).str.strip()
         mapping_df["Sender_ID_Normalized"] = mapping_df["Sender_ID"].apply(normalize_sender_id)
+        mapping_df = mapping_df[
+            (mapping_df["Sender_ID_Normalized"] != "")
+            & mapping_df["RM_Name"].map(is_filled_value)
+        ].drop_duplicates(subset=["Sender_ID_Normalized"], keep="last")
 
-        raw_map = mapping_df.set_index("Sender_ID")["Standard_Name"].to_dict()
-        normalized_map = mapping_df.set_index("Sender_ID_Normalized")["Standard_Name"].to_dict()
+        raw_map = mapping_df.set_index("Sender_ID")["RM_Name"].to_dict()
+        normalized_map = mapping_df.set_index("Sender_ID_Normalized")["RM_Name"].to_dict()
         return raw_map, normalized_map
     except Exception as e:
         st.warning(f"Unable to load sender name mapping: {e}")
         return {}, {}
 
 @st.cache_data(ttl=3600)
-def load_sender_name_mapping(mapping_file_path, mapping_file_mtime):
+def load_rm_name_mapping(mapping_file_path, mapping_file_mtime):
     return _load_sender_name_mapping(mapping_file_path, mapping_file_mtime)
 
 
 def add_standard_sender_name(df):
-    """Add RM column based on Sender_ID mapping or existing Sender_Name values."""
+    """Populate RM from the Excel RM_Name matched by Sender_ID."""
     df = df.copy()
     mapping_mtime = None
     if os.path.exists(SENDER_NAME_MAPPING_FILE):
         mapping_mtime = os.path.getmtime(SENDER_NAME_MAPPING_FILE)
-    raw_map, normalized_map = load_sender_name_mapping(SENDER_NAME_MAPPING_FILE, mapping_mtime)
+    raw_map, normalized_map = load_rm_name_mapping(
+        SENDER_NAME_MAPPING_FILE, mapping_mtime
+    )
 
     sender_id_col = find_sender_column(df, ["Sender_ID", "Sender ID", "sender_id", "sender id", "senderid", "sender-id"])
     sender_name_col = find_sender_column(df, ["Sender_Name", "Sender Name", "sender_name", "sender name", "sendername"])
@@ -485,7 +513,7 @@ def add_standard_sender_name(df):
     if sender_name_col is not None:
         df["Sender_Name"] = df[sender_name_col].astype(str).str.strip()
 
-    # Prefer mapped standard name from Sender_ID first
+    # The Excel RM_Name is the canonical frontend name for a matched Sender_ID.
     df["RM"] = ""
     if "Sender_ID" in df.columns:
         df["RM"] = df["Sender_ID"].map(raw_map).fillna("")
