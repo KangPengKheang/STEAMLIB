@@ -611,6 +611,19 @@ def style_sales_dataframe(df):
         }
     )
 
+    if "No." in df.columns:
+        styler = styler.set_properties(
+            subset=["No."],
+            **{
+                "background-color": "#ECFDF5",
+                "color": "#166534",
+                "font-weight": "800",
+                "text-align": "center",
+                "white-space": "nowrap",
+                "border-right": "1px solid #BBF7D0",
+            },
+        )
+
     styler = styler.set_table_styles(
         [
             {
@@ -647,6 +660,15 @@ def style_sales_dataframe(df):
             {
                 "selector": "tbody tr:hover td",
                 "props": [("background-color", "#ECFDF5")],
+            },
+            {
+                "selector": "th.col0, td.col0",
+                "props": [
+                    ("width", "54px"),
+                    ("min-width", "54px"),
+                    ("max-width", "54px"),
+                    ("text-align", "center"),
+                ],
             },
         ]
     )
@@ -1138,6 +1160,12 @@ def main():
 
                 customer_display_df = customer_display_df.drop(
                     columns=["Potential_Level_Order", "Info_Score"]
+                )
+
+                # Add a simple viewer-friendly sequence after sorting so the
+                # displayed order is always numbered consecutively from 1.
+                customer_display_df.insert(
+                    0, "No.", range(1, len(customer_display_df) + 1)
                 )
 
                 customer_display_df = customer_display_df.rename(
