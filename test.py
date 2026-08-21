@@ -820,6 +820,14 @@ def main():
             display_df = add_standard_sender_name(display_df)
             display_df = prepare_sales_df(display_df)
 
+            # Keep the branch overview independent from portfolio-cleaning rules.
+            # It should match the raw Google Sheet row totals by branch.
+            overview_source_df = telegram_df.copy()
+            if "Message_Date" in overview_source_df.columns:
+                overview_source_df["Message_Date"] = pd.to_datetime(
+                    overview_source_df["Message_Date"], errors="coerce"
+                )
+
             # Count each Tel across the complete dataset before applying any
             # branch, potential, or date filters.
             tel_counts_all_dates = pd.Series(dtype="int64")
@@ -832,11 +840,11 @@ def main():
             today = datetime.now(pytz.timezone("Asia/Phnom_Penh")).date()
 
             if (
-                "Message_Date" in display_df.columns
-                and not display_df["Message_Date"].dropna().empty
+                "Message_Date" in overview_source_df.columns
+                and not overview_source_df["Message_Date"].dropna().empty
             ):
-                min_date = display_df["Message_Date"].dropna().min().date()
-                max_date = display_df["Message_Date"].dropna().max().date()
+                min_date = overview_source_df["Message_Date"].dropna().min().date()
+                max_date = overview_source_df["Message_Date"].dropna().max().date()
             else:
                 min_date = today
                 max_date = today
@@ -844,7 +852,7 @@ def main():
             # =========================
             # BIG PICTURE CHART FIRST
             # =========================
-            overview_df = display_df.copy()
+            overview_df = overview_source_df.copy()
 
             default_overview_date = today if today <= max_date else max_date
 
